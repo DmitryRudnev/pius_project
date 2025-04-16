@@ -5,10 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
-class DeepSeekController extends Controller
-{
-    public function generate(Request $request)
-    {
+class DeepSeekController extends Controller {
+    public function generate(Request $request) {
         $prompt = $request->input('prompt');
 
         if (!$prompt) {
@@ -19,7 +17,7 @@ class DeepSeekController extends Controller
             $response = Http::withoutVerifying()
                 ->withToken(env('DEEPSEEK_TOKEN'))
                 ->post('https://api.deepseek.com/v1/chat/completions', [
-                    'model' => 'deepseek-chat', // или deepseek-coder, если хочешь код
+                    'model' => 'deepseek-chat',
                     'messages' => [
                         ['role' => 'user', 'content' => $prompt],
                     ],
@@ -33,10 +31,10 @@ class DeepSeekController extends Controller
             }
 
             $text = $response->json('choices.0.message.content');
-
             return response()->json(['text' => $text]);
+        } 
 
-        } catch (\Exception $e) {
+        catch (\Exception $e) {
             return response()->json([
                 'error' => 'Exception occurred',
                 'message' => $e->getMessage(),

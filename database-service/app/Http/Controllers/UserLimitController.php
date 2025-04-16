@@ -6,10 +6,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
-class UserLimitController extends Controller
-{
-    public function checkLimit(Request $request)
-    {
+class UserLimitController extends Controller {
+    public function checkLimit(Request $request) {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
             return response()->json(['error' => 'telegram_id is required'], 400);
