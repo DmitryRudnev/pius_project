@@ -1,5 +1,6 @@
 TELEGRAM BOT TOKEN: 8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg
 
+Запустить сервера и мост:
 php artisan serve --port=8000
 php artisan serve --port=8001
 php artisan serve --port=8002
@@ -9,4 +10,9 @@ lt --port 8000 --subdomain piusbot
 
 Проверить вебхук(в браузере): https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/getWebhookInfo
 
-Удалить накопившиеся необработанные обновления https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/deleteWebhook?drop_pending_updates=true
+Удалить накопившиеся необработанные обновления: https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/deleteWebhook?drop_pending_updates=true
+
+Залить изменения на гитхаб:
+git add .
+git commit -m ""
+git push origin main

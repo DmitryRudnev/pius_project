@@ -254,4 +254,63 @@ class TelegramBotController extends Controller {
             \Log::error("Ошибка отправки Telegram-сообщения: " . $e->getMessage());
         }
     }
+
+
+
+    public function setBotCommands() {
+        $commands = [
+            [
+                'command' => 'start',
+                'description' => 'Запустить бота и показать доступные команды'
+            ],
+            [
+                'command' => 'set_movie',
+                'description' => 'Установить фильм для пересказа'
+            ],
+            [
+                'command' => 'set_style',
+                'description' => 'Установить стиль пересказа (режиссёр, жанр и т.д.)'
+            ],
+            [
+                'command' => 'summary',
+                'description' => 'Сгенерировать пересказ фильма'
+            ],
+            [
+                'command' => 'info',
+                'description' => 'Показать информацию о подписке, лимитах и настройках'
+            ],
+            [
+                'command' => 'reset_limits',
+                'description' => 'Сбросить количество запросов за сегодня'
+            ],
+            [
+                'command' => 'subscribe',
+                'description' => 'Оформить подписку для увеличения лимита запросов'
+            ]
+        ];
+
+        try {
+            $response = Http::withoutVerifying()->timeout(60)->post(
+                "https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN') . "/setMyCommands",
+                [
+                    'commands' => json_encode($commands),
+                    'scope' => json_encode(['type' => 'all_private_chats']),
+                    'language_code' => 'ru'
+                ]
+            );
+
+            if ($response->successful()) {
+                \Log::info("Команды бота успешно зарегистрированы.");
+                return response()->json(['status' => 'commands_set']);
+            } 
+            else {
+                \Log::error("Ошибка регистрации команд бота: " . $response->body());
+                return response()->json(['status' => 'commands_set_failed'], 500);
+            }
+        } 
+        catch (\Exception $e) {
+            \Log::error("Исключение при регистрации команд бота: " . $e->getMessage());
+            return response()->json(['status' => 'commands_set_exception'], 500);
+        }
+    }
 }
