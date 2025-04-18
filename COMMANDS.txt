@@ -1,7 +1,12 @@
 TELEGRAM BOT TOKEN: 8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg
-Создать мост: lt --port 8000 --subdomain piusbot
+
+php artisan serve --port=8000
+php artisan serve --port=8001
+php artisan serve --port=8002
+lt --port 8000 --subdomain piusbot
+
 Привязать вебхуки(в браузере): https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/setWebhook?url=https://piusbot.loca.lt/webhook
-Запустить localhost:8000(в папке \pius_project\telegrambot-service): php artisan serve --port=8000
-Запустить localhost:8001(в папке \pius_project\database-service):    php artisan serve --port=8001
-Запустить localhost:8001(в папке \pius_project\deepseek-service):    php artisan serve --port=8002
-Проверить, что мост работает(в браузере): https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/getWebhookInfo
+
+Проверить вебхук(в браузере): https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/getWebhookInfo
+
+Удалить накопившиеся необработанные обновления https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/deleteWebhook?drop_pending_updates=true

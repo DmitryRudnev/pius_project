@@ -20,3 +20,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('/check-limit', [UserLimitController::class, 'checkLimit']);
+Route::post('/user-info', [UserLimitController::class, 'getUserInfo']);
+Route::post('/reset-limits', [UserLimitController::class, 'resetLimits']);
+Route::post('/subscribe', [UserLimitController::class, 'subscribe']);
