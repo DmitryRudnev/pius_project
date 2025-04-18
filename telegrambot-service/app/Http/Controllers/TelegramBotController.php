@@ -18,7 +18,7 @@ class TelegramBotController extends Controller {
             return response()->json(['status' => 'ignored']);
         }
 
-        $this->sendMessage($chatId, "Parsing request...");
+        $this->sendMessage($chatId, "Обрабатываю запрос...");
 
         // Временное хранилище настроек пользователя
         $userKey = "user_settings_{$telegramId}";
@@ -201,7 +201,7 @@ class TelegramBotController extends Controller {
             $this->sendMessage($chatId, 'Лимиты не превышены!');
 
             // DEEPSEEK SERVICE
-            $this->sendMessage($chatId, "Генерация текста...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}");
+            $this->sendMessage($chatId, "Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}");
             $prompt = "Перескажи фильм {$movie} в стиле {$style}.";
             $generationResponse = Http::withoutVerifying()->timeout(180)->post(env('DEEPSEEK_SERVICE_URL'), [
                 'prompt' => $prompt,

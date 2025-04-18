@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\UserLimitController;
+use App\Http\Controllers\DatabaseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,7 +19,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('/check-limit', [UserLimitController::class, 'checkLimit']);
-Route::post('/user-info', [UserLimitController::class, 'getUserInfo']);
-Route::post('/reset-limits', [UserLimitController::class, 'resetLimits']);
-Route::post('/subscribe', [UserLimitController::class, 'subscribe']);
+Route::post('/check-limit', [DatabaseController::class, 'checkLimit']);
+Route::post('/user-info', [DatabaseController::class, 'getUserInfo']);
+Route::post('/reset-limits', [DatabaseController::class, 'resetLimits']);
+Route::post('/subscribe', [DatabaseController::class, 'subscribe']);

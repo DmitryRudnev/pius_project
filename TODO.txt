@@ -1,5 +1,3 @@
 Обновлять last_request_date и todays_requests_count только ПОСЛЕ успешной отправки результата пользователю.
 сделать базу данных при помощи миграций
-
-новый коммит: 
-Добавлен метод setBotCommands() в TelegramBotController.php; добавлен SetBotCommands.php в \telegrambot-service\app\Console\Commands
+доабвить стикеры в sendMessage

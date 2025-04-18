@@ -8,11 +8,11 @@ lt --port 8000 --subdomain piusbot
 
 Привязать вебхуки(в браузере): https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/setWebhook?url=https://piusbot.loca.lt/webhook
 
-Проверить вебхук(в браузере): https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/getWebhookInfo
+Проверить вебхуки(в браузере): https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/getWebhookInfo
 
 Удалить накопившиеся необработанные обновления: https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/deleteWebhook?drop_pending_updates=true
 
 Залить изменения на гитхаб:
 git add .
-git commit -m ""
+git commit -m "UserLimitController переименован в DatabaseController"
 git push origin main
