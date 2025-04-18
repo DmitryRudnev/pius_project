@@ -79,7 +79,7 @@ class TelegramBotController extends Controller {
         elseif ($messageText === '/info') {
             // database-service getUserInfo
             $this->sendMessage($chatId, 'Получение данных о пользователе...');
-            $infoResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_INFO_URL'), [
+            $infoResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_USER_INFO_URL'), [
                 'telegram_id' => $telegramId,
             ]);
 
@@ -121,9 +121,30 @@ class TelegramBotController extends Controller {
 
 
 
+        elseif ($messageText === '/subscribe') {
+            $this->sendMessage($chatId, 'Оформление подписки...');
+
+            // database-service subscribe
+            $subscribeResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_SUBSCRIBE_URL'), [
+                'telegram_id' => $telegramId,
+            ]);
+
+            if ($subscribeResponse->failed()) {
+                $this->sendMessage($chatId, 'Не удалось оформить подписку. Попробуйте позже.');
+                return response()->json(['status' => 'subscription_failed']);
+            }
+
+            $formattedSubscriptionEndDate = Carbon::parse($subscribeResponse->json('subscription_end_date'))->format('d.m.Y');
+            $this->sendMessage($chatId, "Подписка успешно оформлена на 1 месяц! (До {$formattedSubscriptionEndDate})\nСпасибо 🥳");
+            return response()->json(['status' => 'subscription_success']);
+        }
+
+
+
         elseif ($messageText === '/reset_limits') {
             $this->sendMessage($chatId, 'Сброс лимитов...');
 
+            // database-service resetLimits
             $resetResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_RESET_LIMITS_URL'), [
                 'telegram_id' => $telegramId,
             ]);
@@ -135,24 +156,6 @@ class TelegramBotController extends Controller {
 
             $this->sendMessage($chatId, 'Лимиты успешно сброшены!');
             return response()->json(['status' => 'limits_reset_success']);
-        }
-
-
-
-        elseif ($messageText === '/subscribe') {
-            $this->sendMessage($chatId, 'Оформление подписки...');
-
-            $subscribeResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_SUBSCRIBE_URL'), [
-                'telegram_id' => $telegramId,
-            ]);
-
-            if ($subscribeResponse->failed()) {
-                $this->sendMessage($chatId, 'Не удалось оформить подписку. Попробуйте позже.');
-                return response()->json(['status' => 'subscription_failed']);
-            }
-
-            $this->sendMessage($chatId, 'Подписка успешно оформлена на 1 месяц! Спасибо 🥳');
-            return response()->json(['status' => 'subscription_success']);
         }
 
 
@@ -179,13 +182,13 @@ class TelegramBotController extends Controller {
             $movie = $settings['movie'] ?? '';
             $style = $settings['style'] ?? '';
             if (empty($movie) || empty($style)) {
-                $this->sendMessage($chatId, "Укажи фильм и стиль с помощью /set_movie и /set_style.");
+                $this->sendMessage($chatId, "Укажите фильм и стиль с помощью /set_movie и /set_style.");
                 return response()->json(['status' => 'incomplete_settings']);
             }
 
             // database-service checkLimit
             $this->sendMessage($chatId, 'Проверка лимитов запросов...');
-            $limitResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_SERVICE_URL'), [
+            $limitResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_CHECK_LIMITS_URL'), [
                 'telegram_id' => $telegramId,
             ]);
 
@@ -194,11 +197,14 @@ class TelegramBotController extends Controller {
                 return response()->json(['status' => 'user_limits_fetch_failed']);
             }
 
-            if (!$limitResponse->json('allowed')) {
-                $this->sendMessage($chatId, 'Вы достигли лимита запросов в день!');
+            $requests_count = $limitResponse->json('todays_requests_count');
+            $max_requests = $limitResponse->json('max_requests_per_day');
+
+            if ($requests_count >= $max_requests) {
+                $this->sendMessage($chatId, "Вы достигли лимита запросов в день! ({$requests_count}/{$max_requests})");
                 return response()->json(['status' => 'limited']);
             }
-            $this->sendMessage($chatId, 'Лимиты не превышены!');
+            $this->sendMessage($chatId, "Лимиты не превышены! ({$requests_count}/{$max_requests})");
 
             // DEEPSEEK SERVICE
             $this->sendMessage($chatId, "Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}");
@@ -212,8 +218,24 @@ class TelegramBotController extends Controller {
                 return response()->json(['status' => 'text_generation_failed']);
             }
 
-            $generatedText = $generationResponse->json('text') ?? 'Ответ не получен.';
+            $generatedText = $generationResponse->json('text');
+            if (empty($generatedText)) {
+                $this->sendMessage($chatId, 'Ошибка генерации текста. Попробуйте позже.');
+                return response()->json(['status' => 'text_generation_failed']);
+            }
+
             $this->sendMessage($chatId, $generatedText);
+
+            // database-service updateRequest
+            $updateResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_INCREMENT_LIMITS_URL'), [
+                'telegram_id' => $telegramId,
+            ]);
+
+            if ($updateResponse->failed()) {
+                $this->sendMessage($chatId, 'Ошибка связи с базой данных.');
+                return response()->json(['status' => 'user_request_update_failed']);
+            }
+
             return response()->json(['status' => 'summary_generated']);
         } 
 

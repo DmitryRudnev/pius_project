@@ -19,7 +19,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('/check-limit', [DatabaseController::class, 'checkLimit']);
-Route::post('/user-info', [DatabaseController::class, 'getUserInfo']);
-Route::post('/reset-limits', [DatabaseController::class, 'resetLimits']);
+Route::post('/user-info', [DatabaseController::class, 'userInfo']);
 Route::post('/subscribe', [DatabaseController::class, 'subscribe']);
+Route::post('/reset-limits', [DatabaseController::class, 'resetLimits']);
+Route::post('/check-limits', [DatabaseController::class, 'checkLimits']);
+Route::post('/increment-limits', [DatabaseController::class, 'incrementLimits']);
