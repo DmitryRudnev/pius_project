@@ -12,6 +12,8 @@ lt --port 8000 --subdomain piusbot
 
 Удалить накопившиеся необработанные обновления: https://api.telegram.org/bot8013979701:AAFpg9fU9TU-SOFtzJyx1UtYOFJkcI3P1Lg/deleteWebhook?drop_pending_updates=true
 
+Обновить подсказки в боте: php artisan telegram:set-commands
+
 Залить изменения на гитхаб:
 git add .
 git commit -m "Теперь last_request_date и todays_requests_count обновляются ПОСЛЕ успешной отправки пересказа"

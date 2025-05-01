@@ -18,8 +18,6 @@ class TelegramBotController extends Controller {
             return response()->json(['status' => 'ignored']);
         }
 
-        $this->sendMessage($chatId, "Обрабатываю запрос...");
-
         // Временное хранилище настроек пользователя
         $userKey = "user_settings_{$telegramId}";
         $settings = Cache::get($userKey, []);
@@ -53,19 +51,17 @@ class TelegramBotController extends Controller {
 
         elseif ($messageText === '/start') {
             $startText = <<<TEXT
-            👋 Привет! Я бот, который может пересказать фильм в выбранном тобой стиле.
+            👋 Привет! Я бот, который может пересказать фильм от лица твоего бухого деда.
 
             Доступные команды:
 
-            🎬 /set_movie – Установить фильм для пересказа.
+            🎬 /set_movie – Выбрать фильм для пересказа.
 
-            🎭 /set_style – Установить стиль (режиссёр, жанр и т.д.).
+            🎭 /set_style – Выбрать кастомный стиль (режиссёр, жанр и т.д.). Стиль по умолчанию - 'Бухой дед'.
 
-            📤 /summary – Сгенерировать пересказ.
+            📤 /generate_summary – Сгенерировать пересказ фильма.
 
             ℹ️ /info – Посмотреть информацию о себе: подписка, лимиты и текущие настройки.
-
-            🔄 /reset_limits – Сбросить количество запросов за сегодня (0).
 
             💎 /subscribe – Оформить подписку (даёт больше запросов в день).
             TEXT;
@@ -77,20 +73,19 @@ class TelegramBotController extends Controller {
 
 
         elseif ($messageText === '/info') {
-            // database-service getUserInfo
-            $this->sendMessage($chatId, 'Получение данных о пользователе...');
+            // DATABASE-SERVICE getUserInfo
             $infoResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_USER_INFO_URL'), [
                 'telegram_id' => $telegramId,
             ]);
 
             if ($infoResponse->failed()) {
-                $this->sendMessage($chatId, 'Не удалось получить информацию.');
+                $this->sendMessage($chatId, '❌ Не удалось получить информацию.');
                 return response()->json(['status' => 'user_info_fetch_failed']);
             }
 
             $userInfo = $infoResponse->json();
-            $movie = $settings['movie'] ?? '';
-            $style = $settings['style'] ?? '';
+            $movie = $settings['movie'] ?? '-';
+            $style = $settings['style'] ?? 'Бухой дед';
 
             $subscriptionStatus = $userInfo['has_subscription'] ? '✅ Активна' : '❌ Не Активна';
             $maxRequests = $userInfo['max_requests_per_day'] ?? 'Неизвестно';
@@ -122,40 +117,8 @@ class TelegramBotController extends Controller {
 
 
         elseif ($messageText === '/subscribe') {
-            $this->sendMessage($chatId, 'Оформление подписки...');
-
-            // database-service subscribe
-            $subscribeResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_SUBSCRIBE_URL'), [
-                'telegram_id' => $telegramId,
-            ]);
-
-            if ($subscribeResponse->failed()) {
-                $this->sendMessage($chatId, 'Не удалось оформить подписку. Попробуйте позже.');
-                return response()->json(['status' => 'subscription_failed']);
-            }
-
-            $formattedSubscriptionEndDate = Carbon::parse($subscribeResponse->json('subscription_end_date'))->format('d.m.Y');
-            $this->sendMessage($chatId, "Подписка успешно оформлена на 1 месяц! (До {$formattedSubscriptionEndDate})\nСпасибо 🥳");
+            $this->sendMessage($chatId, '🚧 Извините, данный сервис пока что не доступен');
             return response()->json(['status' => 'subscription_success']);
-        }
-
-
-
-        elseif ($messageText === '/reset_limits') {
-            $this->sendMessage($chatId, 'Сброс лимитов...');
-
-            // database-service resetLimits
-            $resetResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_RESET_LIMITS_URL'), [
-                'telegram_id' => $telegramId,
-            ]);
-
-            if ($resetResponse->failed()) {
-                $this->sendMessage($chatId, 'Не удалось сбросить лимиты.');
-                return response()->json(['status' => 'limits_reset_failed']);
-            }
-
-            $this->sendMessage($chatId, 'Лимиты успешно сброшены!');
-            return response()->json(['status' => 'limits_reset_success']);
         }
 
 
@@ -170,7 +133,7 @@ class TelegramBotController extends Controller {
 
 
         elseif ($messageText === '/set_style') {
-            $this->sendMessage($chatId, "🎨 Введите стиль:");
+            $this->sendMessage($chatId, "🎨 Введите стиль:\n(Для того, чтобы выбрать стиль по умолчанию, введите 'Бухой дед')");
             $settings['state'] = 'awaiting_style_input';
             Cache::put($userKey, $settings, now()->addMinutes(15));
             return response()->json(['status' => 'awaiting_style_input']);
@@ -178,22 +141,22 @@ class TelegramBotController extends Controller {
 
 
 
-        elseif ($messageText === '/summary') {
+        elseif ($messageText === '/generate_summary') {
             $movie = $settings['movie'] ?? '';
-            $style = $settings['style'] ?? '';
-            if (empty($movie) || empty($style)) {
-                $this->sendMessage($chatId, "Укажите фильм и стиль с помощью /set_movie и /set_style.");
+            $style = $settings['style'] ?? 'Бухой дед';
+            if (empty($movie)) {
+                $this->sendMessage($chatId, "⚠️ Укажите фильм с помощью /set_movie.");
                 return response()->json(['status' => 'incomplete_settings']);
             }
 
-            // database-service checkLimit
-            $this->sendMessage($chatId, 'Проверка лимитов запросов...');
+            // DATABASE-SERVICE checkLimit
+            $this->sendMessage($chatId, '🔄 Проверка лимитов запросов...');
             $limitResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_CHECK_LIMITS_URL'), [
                 'telegram_id' => $telegramId,
             ]);
 
             if ($limitResponse->failed()) {
-                $this->sendMessage($chatId, 'Ошибка связи с сервисом проверки лимитов.');
+                $this->sendMessage($chatId, '❌ Ошибка связи с сервисом проверки лимитов.');
                 return response()->json(['status' => 'user_limits_fetch_failed']);
             }
 
@@ -201,38 +164,54 @@ class TelegramBotController extends Controller {
             $max_requests = $limitResponse->json('max_requests_per_day');
 
             if ($requests_count >= $max_requests) {
-                $this->sendMessage($chatId, "Вы достигли лимита запросов в день! ({$requests_count}/{$max_requests})");
+                $this->sendMessage($chatId, "🚫 Вы достигли лимита запросов в день! ({$requests_count}/{$max_requests})");
                 return response()->json(['status' => 'limited']);
             }
-            $this->sendMessage($chatId, "Лимиты не превышены! ({$requests_count}/{$max_requests})");
+            $this->sendMessage($chatId, "✅ Лимиты не превышены! ({$requests_count}/{$max_requests})");
 
-            // DEEPSEEK SERVICE
-            $this->sendMessage($chatId, "Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}");
-            $prompt = "Перескажи фильм {$movie} в стиле {$style}.";
+            $this->sendMessage($chatId, "🛠 Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}\n\nP.S. Обычно это занимает примерно 30 сек.");
+            
+            if ($style == 'Бухой дед') {
+                $prompt = <<<TEXT
+                Представь, что ты русский дед, который воевал во второй мировой войне.
+                Ты любишь СССР, Сталина и водку.
+                Ты ненавидишь Америку, Европу, Обаму, Байдена, негров, геев и фашистов.
+                Ты часто упоминаешь, что раньше(в СССР) было лучше.
+                Также ты часто говоришь, что Америка и Европа - загнивающие страны, там гораздо хуже, чем в матушке-Росссии.
+                Используй устареший диалект и просторечия("ихний", "евонный" и т. д.).
+                В соответствии с этим образом перескажи фильм '{$movie}'.
+                TEXT;
+            }
+            
+            else {
+                $prompt = "Перескажи фильм '{$movie}' в стиле '{$style}'.";
+            }
+            
+            // DEEPSEEK-SERVICE
             $generationResponse = Http::withoutVerifying()->timeout(180)->post(env('DEEPSEEK_SERVICE_URL'), [
                 'prompt' => $prompt,
             ]);
 
             if ($generationResponse->failed()) {
-                $this->sendMessage($chatId, 'Ошибка генерации текста. Попробуйте позже.');
+                $this->sendMessage($chatId, '❌ Ошибка генерации текста. Попробуйте позже.');
                 return response()->json(['status' => 'text_generation_failed']);
             }
 
             $generatedText = $generationResponse->json('text');
             if (empty($generatedText)) {
-                $this->sendMessage($chatId, 'Ошибка генерации текста. Попробуйте позже.');
+                $this->sendMessage($chatId, '❌ Ошибка генерации текста. Попробуйте позже.');
                 return response()->json(['status' => 'text_generation_failed']);
             }
 
             $this->sendMessage($chatId, $generatedText);
 
-            // database-service updateRequest
+            // DATABASE-SERVICE updateRequest
             $updateResponse = Http::withoutVerifying()->timeout(60)->post(env('DATABASE_INCREMENT_LIMITS_URL'), [
                 'telegram_id' => $telegramId,
             ]);
 
             if ($updateResponse->failed()) {
-                $this->sendMessage($chatId, 'Ошибка связи с базой данных.');
+                $this->sendMessage($chatId, '❌ Ошибка связи с базой данных.');
                 return response()->json(['status' => 'user_request_update_failed']);
             }
 
@@ -245,15 +224,13 @@ class TelegramBotController extends Controller {
             $availableCommandsText = <<<TEXT
             Доступные команды:
 
-            🎬 /set_movie – Установить фильм для пересказа.
+            🎬 /set_movie – Выбрать фильм для пересказа.
 
-            🎭 /set_style – Установить стиль (режиссёр, жанр и т.д.).
+            🎭 /set_style – Выбрать кастомный стиль (режиссёр, жанр и т.д.). Стиль по умолчанию - 'Бухой дед'.
 
-            📤 /summary – Сгенерировать пересказ.
+            📤 /generate_summary – Сгенерировать пересказ фильма.
 
             ℹ️ /info – Посмотреть информацию о себе: подписка, лимиты и текущие настройки.
-
-            🔄 /reset_limits – Сбросить количество запросов за сегодня (0).
 
             💎 /subscribe – Оформить подписку (даёт больше запросов в день).
             TEXT;
@@ -283,27 +260,23 @@ class TelegramBotController extends Controller {
         $commands = [
             [
                 'command' => 'start',
-                'description' => 'Запустить бота и показать доступные команды'
+                'description' => 'Вывести общую информацию о боте'
             ],
             [
                 'command' => 'set_movie',
-                'description' => 'Установить фильм для пересказа'
+                'description' => 'Выбрать фильм для пересказа'
             ],
             [
                 'command' => 'set_style',
-                'description' => 'Установить стиль пересказа (режиссёр, жанр и т.д.)'
+                'description' => 'Выбрать кастомный стиль для пересказа'
             ],
             [
-                'command' => 'summary',
+                'command' => 'generate_summary',
                 'description' => 'Сгенерировать пересказ фильма'
             ],
             [
                 'command' => 'info',
                 'description' => 'Показать информацию о подписке, лимитах и настройках'
-            ],
-            [
-                'command' => 'reset_limits',
-                'description' => 'Сбросить количество запросов за сегодня'
             ],
             [
                 'command' => 'subscribe',
