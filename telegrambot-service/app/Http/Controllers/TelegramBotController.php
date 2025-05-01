@@ -99,10 +99,11 @@ class TelegramBotController extends Controller {
 
             if ($userInfo['has_subscription']) {
                 $formattedDate = Carbon::parse($userInfo['subscription_end_date'])->format('d.m.Y');
-                $infoText .= " (до {$formattedDate})\n";
+                $infoText .= " (до {$formattedDate})";
             }
 
             $infoText .= <<<TEXT
+
             🔹 Лимит запросов в день: {$maxRequests}
             🔹 Запросов за сегодня: {$userInfo['todays_requests_count']}
 

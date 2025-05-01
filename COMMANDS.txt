@@ -16,5 +16,9 @@ lt --port 8000 --subdomain piusbot
 
 Залить изменения на гитхаб:
 git add .
-git commit -m "Теперь last_request_date и todays_requests_count обновляются ПОСЛЕ успешной отправки пересказа"
+git commit -m ""
 git push origin main
+
+Переименовать последний коммит:
+git commit --amend -m ""
+git push origin main --force
