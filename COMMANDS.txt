@@ -16,7 +16,7 @@ lt --port 8000 --subdomain piusbot
 
 Залить изменения на гитхаб:
 git add .
-git commit -m ""
+git commit -m "Добавлен README"
 git push origin main
 
 Переименовать последний коммит:

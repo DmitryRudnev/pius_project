@@ -139,6 +139,6 @@ class DatabaseController extends Controller {
         $user->last_request_date = Carbon::today();
         $user->save();
 
-        return response()->json(['status' => 'limits incremented', 'subscription_end_date' => $user->subscription_end_date]);
+        return response()->json(['status' => 'limits incremented']);
     }
 }
