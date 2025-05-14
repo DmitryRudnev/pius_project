@@ -1,13 +1,16 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
-class DatabaseController extends Controller {
-    public function userInfo(Request $request) {
+class DatabaseController extends Controller
+{
+    public function userInfo(Request $request)
+    {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
             return response()->json(['error' => 'telegram_id is required'], 400);
@@ -40,9 +43,8 @@ class DatabaseController extends Controller {
         ]);
     }
 
-
-
-    public function subscribe(Request $request) {
+    public function subscribe(Request $request)
+    {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
             return response()->json(['error' => 'telegram_id is required'], 400);
@@ -60,12 +62,14 @@ class DatabaseController extends Controller {
         $user->subscription_end_date = now()->addMonth()->toDateString();
         $user->save();
 
-        return response()->json(['status' => 'subscribed', 'subscription_end_date' => $user->subscription_end_date]);
+        return response()->json([
+            'status' => 'subscribed',
+            'subscription_end_date' => $user->subscription_end_date,
+        ]);
     }
 
-
-
-    public function resetLimits(Request $request) {
+    public function resetLimits(Request $request)
+    {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
             return response()->json(['error' => 'telegram_id is required'], 400);
@@ -86,9 +90,8 @@ class DatabaseController extends Controller {
         return response()->json(['status' => 'limits reseted']);
     }
 
-
-
-    public function checkLimits(Request $request) {
+    public function checkLimits(Request $request)
+    {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
             return response()->json(['error' => 'telegram_id is required'], 400);
@@ -118,9 +121,8 @@ class DatabaseController extends Controller {
         ]);
     }
 
-
-
-    public function incrementLimits(Request $request) {
+    public function incrementLimits(Request $request)
+    {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
             return response()->json(['error' => 'telegram_id is required'], 400);
