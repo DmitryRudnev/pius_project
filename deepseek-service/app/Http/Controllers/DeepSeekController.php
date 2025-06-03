@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\JsonResponse;
 
 class DeepSeekController extends Controller
 {
-    public function generate(Request $request)
+    public function generate(Request $request): JsonResponse
     {
         $prompt = $request->input('prompt');
 

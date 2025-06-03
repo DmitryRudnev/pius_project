@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
 
 class DatabaseController extends Controller
 {
-    public function userInfo(Request $request)
+    public function userInfo(Request $request): JsonResponse
     {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
@@ -19,9 +20,9 @@ class DatabaseController extends Controller
         $user = User::firstOrCreate(
             ['telegram_id' => $telegramId],
             [
-                'subscription_end_date' => '2000-01-01',
+                'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => '2000-01-01',
+                'last_request_date' => Carbon::parse('2000-01-01'),
             ]
         );
 
@@ -43,7 +44,7 @@ class DatabaseController extends Controller
         ]);
     }
 
-    public function subscribe(Request $request)
+    public function subscribe(Request $request): JsonResponse
     {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
@@ -53,13 +54,13 @@ class DatabaseController extends Controller
         $user = User::firstOrCreate(
             ['telegram_id' => $telegramId],
             [
-                'subscription_end_date' => '2000-01-01',
+                'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => '2000-01-01',
+                'last_request_date' => Carbon::parse('2000-01-01'),
             ]
         );
 
-        $user->subscription_end_date = now()->addMonth()->toDateString();
+        $user->subscription_end_date = now()->addMonth();
         $user->save();
 
         return response()->json([
@@ -68,7 +69,7 @@ class DatabaseController extends Controller
         ]);
     }
 
-    public function resetLimits(Request $request)
+    public function resetLimits(Request $request): JsonResponse
     {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
@@ -78,9 +79,9 @@ class DatabaseController extends Controller
         $user = User::firstOrCreate(
             ['telegram_id' => $telegramId],
             [
-                'subscription_end_date' => '2000-01-01',
+                'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => '2000-01-01',
+                'last_request_date' => Carbon::parse('2000-01-01'),
             ]
         );
 
@@ -90,7 +91,7 @@ class DatabaseController extends Controller
         return response()->json(['status' => 'limits reseted']);
     }
 
-    public function checkLimits(Request $request)
+    public function checkLimits(Request $request): JsonResponse
     {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
@@ -100,9 +101,9 @@ class DatabaseController extends Controller
         $user = User::firstOrCreate(
             ['telegram_id' => $telegramId],
             [
-                'subscription_end_date' => '2000-01-01',
+                'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => '2000-01-01',
+                'last_request_date' => Carbon::parse('2000-01-01'),
             ]
         );
 
@@ -121,7 +122,7 @@ class DatabaseController extends Controller
         ]);
     }
 
-    public function incrementLimits(Request $request)
+    public function incrementLimits(Request $request): JsonResponse
     {
         $telegramId = $request->input('telegram_id');
         if (!$telegramId) {
@@ -131,9 +132,9 @@ class DatabaseController extends Controller
         $user = User::firstOrCreate(
             ['telegram_id' => $telegramId],
             [
-                'subscription_end_date' => '2000-01-01',
+                'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => '2000-01-01',
+                'last_request_date' => Carbon::parse('2000-01-01'),
             ]
         );
 

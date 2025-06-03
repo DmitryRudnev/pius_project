@@ -27,5 +27,5 @@ for /f "tokens=5" %%a in ('netstat -aon ^| find ":8002" ^| find "LISTENING"') do
 rem Kill localtunnel process
 taskkill /IM node.exe /F >nul 2>&1
 
-echo All services have been stopped.
-pause
+rem echo All services have been stopped.
+rem pause

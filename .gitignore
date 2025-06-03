@@ -25,3 +25,5 @@ Desktop.ini
 .vscode/
 *.sublime-project
 *.sublime-workspace
+
+/COMMANDS.txt
