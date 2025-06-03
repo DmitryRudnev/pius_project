@@ -21,7 +21,7 @@ class DeepSeekController extends Controller
                 ->timeout(180)
                 ->withToken(env('DEEPSEEK_TOKEN'))
                 ->post('https://api.deepseek.com/v1/chat/completions', [
-                    'model' => 'deepseek-chat',
+                    'model'    => 'deepseek-chat',
                     'messages' => [
                         ['role' => 'user', 'content' => $prompt],
                     ],
@@ -29,7 +29,7 @@ class DeepSeekController extends Controller
 
             if ($response->failed()) {
                 return response()->json([
-                    'error' => 'DeepSeek API error',
+                    'error'   => 'DeepSeek API error',
                     'details' => $response->body(),
                 ], 500);
             }
@@ -39,7 +39,7 @@ class DeepSeekController extends Controller
             return response()->json(['text' => $text]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Exception occurred',
+                'error'   => 'Exception occurred',
                 'message' => $e->getMessage(),
             ], 500);
         }

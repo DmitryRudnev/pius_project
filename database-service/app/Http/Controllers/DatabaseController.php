@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -22,13 +21,13 @@ class DatabaseController extends Controller
             [
                 'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => Carbon::parse('2000-01-01'),
+                'last_request_date'     => Carbon::parse('2000-01-01'),
             ]
         );
 
-        $today = Carbon::today();
+        $today           = Carbon::today();
         $hasSubscription = $user->subscription_end_date->gt($today);
-        $maxRequests = $hasSubscription ? 50 : 10;
+        $maxRequests     = $hasSubscription ? 50 : 10;
 
         if ($user->last_request_date->lt($today)) {
             $user->todays_requests_count = 0;
@@ -36,11 +35,11 @@ class DatabaseController extends Controller
         }
 
         return response()->json([
-            'telegram_id' => $user->telegram_id,
-            'has_subscription' => $hasSubscription,
+            'telegram_id'           => $user->telegram_id,
+            'has_subscription'      => $hasSubscription,
             'subscription_end_date' => $user->subscription_end_date,
             'todays_requests_count' => $user->todays_requests_count,
-            'max_requests_per_day' => $maxRequests,
+            'max_requests_per_day'  => $maxRequests,
         ]);
     }
 
@@ -56,7 +55,7 @@ class DatabaseController extends Controller
             [
                 'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => Carbon::parse('2000-01-01'),
+                'last_request_date'     => Carbon::parse('2000-01-01'),
             ]
         );
 
@@ -64,7 +63,7 @@ class DatabaseController extends Controller
         $user->save();
 
         return response()->json([
-            'status' => 'subscribed',
+            'status'                => 'subscribed',
             'subscription_end_date' => $user->subscription_end_date,
         ]);
     }
@@ -81,7 +80,7 @@ class DatabaseController extends Controller
             [
                 'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => Carbon::parse('2000-01-01'),
+                'last_request_date'     => Carbon::parse('2000-01-01'),
             ]
         );
 
@@ -103,13 +102,13 @@ class DatabaseController extends Controller
             [
                 'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => Carbon::parse('2000-01-01'),
+                'last_request_date'     => Carbon::parse('2000-01-01'),
             ]
         );
 
-        $today = Carbon::today();
+        $today           = Carbon::today();
         $hasSubscription = $user->subscription_end_date->gt($today);
-        $maxRequests = $hasSubscription ? 50 : 10;
+        $maxRequests     = $hasSubscription ? 50 : 10;
 
         if ($user->last_request_date->lt($today)) {
             $user->todays_requests_count = 0;
@@ -118,7 +117,7 @@ class DatabaseController extends Controller
 
         return response()->json([
             'todays_requests_count' => $user->todays_requests_count,
-            'max_requests_per_day' => $maxRequests,
+            'max_requests_per_day'  => $maxRequests,
         ]);
     }
 
@@ -134,7 +133,7 @@ class DatabaseController extends Controller
             [
                 'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => Carbon::parse('2000-01-01'),
+                'last_request_date'     => Carbon::parse('2000-01-01'),
             ]
         );
 

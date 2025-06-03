@@ -13,14 +13,14 @@ class TelegramBotController extends Controller
     public function handle(Request $request): JsonResponse
     {
         $messageText = $request->input('message.text');
-        $chatId = $request->input('message.chat.id');
-        $telegramId = $request->input('message.from.id');
+        $chatId      = $request->input('message.chat.id');
+        $telegramId  = $request->input('message.from.id');
 
         if (!$messageText || !$chatId || !$telegramId) {
             return response()->json(['status' => 'ignored']);
         }
 
-        $userKey = "user_settings_{$telegramId}";
+        $userKey  = "user_settings_{$telegramId}";
         $settings = Cache::get($userKey, []);
 
         if (isset($settings['state'])) {
@@ -73,8 +73,8 @@ class TelegramBotController extends Controller
             }
 
             $userInfo = $infoResponse->json();
-            $movie = $settings['movie'] ?? '-';
-            $style = $settings['style'] ?? 'Бухой дед';
+            $movie    = $settings['movie'] ?? '-';
+            $style    = $settings['style'] ?? 'Бухой дед';
 
             $subscriptionStatus = $userInfo['has_subscription']
                 ? '✅ Активна'
@@ -109,7 +109,7 @@ class TelegramBotController extends Controller
             $this->sendMessage($chatId, '🚧 Извините, данный сервис пока что не доступен');
             return response()->json(['status' => 'subscription_success']);
         } elseif ($messageText === '/set_movie') {
-            $this->sendMessage($chatId, "🎬 Введите название фильма:");
+            $this->sendMessage($chatId, '🎬 Введите название фильма:');
             $settings['state'] = 'awaiting_movie_input';
             Cache::put($userKey, $settings, now()->addMinutes(15));
             return response()->json(['status' => 'awaiting_movie_input']);
@@ -125,7 +125,7 @@ class TelegramBotController extends Controller
             $movie = $settings['movie'] ?? '';
             $style = $settings['style'] ?? 'Бухой дед';
             if (empty($movie)) {
-                $this->sendMessage($chatId, "⚠️ Укажите фильм с помощью /set_movie.");
+                $this->sendMessage($chatId, '⚠️ Укажите фильм с помощью /set_movie.');
                 return response()->json(['status' => 'incomplete_settings']);
             }
 
@@ -142,7 +142,7 @@ class TelegramBotController extends Controller
             }
 
             $requestsCount = $limitResponse->json('todays_requests_count');
-            $maxRequests = $limitResponse->json('max_requests_per_day');
+            $maxRequests   = $limitResponse->json('max_requests_per_day');
 
             if ($requestsCount >= $maxRequests) {
                 $this->sendMessage(
@@ -160,7 +160,7 @@ class TelegramBotController extends Controller
             $this->sendMessage(
                 $chatId,
                 "🛠 Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}\n\n"
-                . "P.S. Обычно это занимает примерно 30 сек."
+                . 'P.S. Обычно это занимает примерно 30 сек.'
             );
 
             if ($style == 'Бухой дед') {
@@ -235,11 +235,11 @@ class TelegramBotController extends Controller
             Http::withoutVerifying()
                 ->timeout(60)
                 ->post(
-                    "https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN') . "/sendMessage",
+                    'https://api.telegram.org/bot' . env('TELEGRAM_BOT_TOKEN') . '/sendMessage',
                     ['chat_id' => $chatId, 'text' => $text]
                 );
         } catch (\Exception $e) {
-            \Log::error("Ошибка отправки Telegram-сообщения: " . $e->getMessage());
+            \Log::error('Ошибка отправки Telegram-сообщения: ' . $e->getMessage());
         }
     }
 
@@ -247,27 +247,27 @@ class TelegramBotController extends Controller
     {
         $commands = [
             [
-                'command' => 'start',
+                'command'     => 'start',
                 'description' => 'Вывести общую информацию о боте',
             ],
             [
-                'command' => 'set_movie',
+                'command'     => 'set_movie',
                 'description' => 'Выбрать фильм для пересказа',
             ],
             [
-                'command' => 'set_style',
+                'command'     => 'set_style',
                 'description' => 'Выбрать кастомный стиль для пересказа',
             ],
             [
-                'command' => 'generate_summary',
+                'command'     => 'generate_summary',
                 'description' => 'Сгенерировать пересказ фильма',
             ],
             [
-                'command' => 'info',
+                'command'     => 'info',
                 'description' => 'Показать информацию о подписке, лимитах и настройках',
             ],
             [
-                'command' => 'subscribe',
+                'command'     => 'subscribe',
                 'description' => 'Оформить подписку для увеличения лимита запросов',
             ],
         ];
@@ -276,23 +276,23 @@ class TelegramBotController extends Controller
             $response = Http::withoutVerifying()
                 ->timeout(60)
                 ->post(
-                    "https://api.telegram.org/bot" . env('TELEGRAM_BOT_TOKEN') . "/setMyCommands",
+                    'https://api.telegram.org/bot' . env('TELEGRAM_BOT_TOKEN') . '/setMyCommands',
                     [
-                        'commands' => json_encode($commands),
-                        'scope' => json_encode(['type' => 'all_private_chats']),
+                        'commands'      => json_encode($commands),
+                        'scope'         => json_encode(['type' => 'all_private_chats']),
                         'language_code' => 'ru',
                     ]
                 );
 
             if ($response->successful()) {
-                \Log::info("Команды бота успешно зарегистрированы.");
+                \Log::info('Команды бота успешно зарегистрированы.');
                 return response()->json(['status' => 'commands_set']);
             } else {
-                \Log::error("Ошибка регистрации команд бота: " . $response->body());
+                \Log::error('Ошибка регистрации команд бота: ' . $response->body());
                 return response()->json(['status' => 'commands_set_failed'], 500);
             }
         } catch (\Exception $e) {
-            \Log::error("Исключение при регистрации команд бота: " . $e->getMessage());
+            \Log::error('Исключение при регистрации команд бота: ' . $e->getMessage());
             return response()->json(['status' => 'commands_set_exception'], 500);
         }
     }
