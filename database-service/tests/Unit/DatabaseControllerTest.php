@@ -34,10 +34,13 @@ class DatabaseControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJson([
-                     'telegram_id' => $telegramId,
-                     'has_subscription' => false,
-                     'todays_requests_count' => 0,
-                     'max_requests_per_day' => 10,
+                     'success' => true,
+                     'data' => [
+                         'telegram_id' => $telegramId,
+                         'has_subscription' => false,
+                         'todays_requests_count' => 0,
+                         'max_requests_per_day' => User::MAX_REQUESTS_FREE,
+                     ],
                  ]);
 
         $this->assertDatabaseHas('users', [
@@ -64,11 +67,17 @@ class DatabaseControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJson([
-                     'status' => 'subscribed',
+                     'success' => true,
+                     'data' => [
+                         'status' => 'subscribed',
+                     ],
                  ])
                  ->assertJsonStructure([
-                     'status',
-                     'subscription_end_date',
+                     'success',
+                     'data' => [
+                         'status',
+                         'subscription_end_date',
+                     ],
                  ]);
 
         $this->assertDatabaseHas('users', [
@@ -101,7 +110,8 @@ class DatabaseControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJson([
-                     'status' => 'limits reseted',
+                     'success' => true,
+                     'data' => ['status' => 'limits_reset'],
                  ]);
 
         $this->assertDatabaseHas('users', [
@@ -134,8 +144,11 @@ class DatabaseControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJson([
-                     'todays_requests_count' => 3,
-                     'max_requests_per_day' => 50,
+                     'success' => true,
+                     'data' => [
+                         'todays_requests_count' => 3,
+                         'max_requests_per_day' => User::MAX_REQUESTS_SUBSCRIBED,
+                     ],
                  ]);
     }
 
@@ -163,7 +176,8 @@ class DatabaseControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJson([
-                     'status' => 'limits incremented',
+                     'success' => true,
+                     'data' => ['status' => 'limits_incremented'],
                  ]);
 
         $this->assertDatabaseHas('users', [
@@ -195,7 +209,8 @@ class DatabaseControllerTest extends TestCase
             $response = $this->postJson($endpoint, []);
             $response->assertStatus(400)
                      ->assertJson([
-                         'error' => 'telegram_id is required',
+                         'success' => false,
+                         'error' => 'telegram_id is required and must be an integer',
                      ]);
         }
     }

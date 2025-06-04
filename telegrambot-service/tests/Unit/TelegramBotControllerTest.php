@@ -40,7 +40,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'start_command_handled']);
+                 ->assertJson(['success' => true, 'status' => 'start_command_handled']);
     }
 
     /**
@@ -57,7 +57,7 @@ class TelegramBotControllerTest extends TestCase
             'https://api.telegram.org/*' => Http::response([], 200),
         ]);
 
-        Cache::shouldReceive('get')->once()->with('user_settings_456', [])->andReturn([]);
+        Cache::shouldReceive('get')->twice()->with('user_settings_456', [])->andReturn([]);
         Cache::shouldReceive('put')->once()->with('user_settings_456', ['state' => 'awaiting_movie_input'], \Mockery::any());
 
         $response = $this->postJson('/webhook', [
@@ -69,7 +69,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'awaiting_movie_input']);
+                 ->assertJson(['success' => true, 'status' => 'awaiting_movie_input']);
     }
 
     /**
@@ -86,8 +86,8 @@ class TelegramBotControllerTest extends TestCase
             'https://api.telegram.org/*' => Http::response([], 200),
         ]);
 
-        Cache::shouldReceive('get')->once()->with('user_settings_456', [])->andReturn(['state' => 'awaiting_movie_input']);
-        Cache::shouldReceive('put')->once()->with('user_settings_456', ['movie' => 'Назад в будущее'], \Mockery::any());
+        Cache::shouldReceive('get')->twice()->with('user_settings_456', [])->andReturn(['state' => 'awaiting_movie_input']);
+        Cache::shouldReceive('put')->once()->with('user_settings_456', ['movie' => 'Назад в будущее', 'state' => null], \Mockery::any());
 
         $response = $this->postJson('/webhook', [
             'message' => [
@@ -98,7 +98,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'movie_input_saved']);
+                 ->assertJson(['success' => true, 'status' => 'movie_input_saved']);
     }
 
     /**
@@ -115,7 +115,7 @@ class TelegramBotControllerTest extends TestCase
             'https://api.telegram.org/*' => Http::response([], 200),
         ]);
 
-        Cache::shouldReceive('get')->once()->with('user_settings_456', [])->andReturn([]);
+        Cache::shouldReceive('get')->twice()->with('user_settings_456', [])->andReturn([]);
         Cache::shouldReceive('put')->once()->with('user_settings_456', ['state' => 'awaiting_style_input'], \Mockery::any());
 
         $response = $this->postJson('/webhook', [
@@ -127,7 +127,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'awaiting_style_input']);
+                 ->assertJson(['success' => true, 'status' => 'awaiting_style_input']);
     }
 
     /**
@@ -144,8 +144,8 @@ class TelegramBotControllerTest extends TestCase
             'https://api.telegram.org/*' => Http::response([], 200),
         ]);
 
-        Cache::shouldReceive('get')->once()->with('user_settings_456', [])->andReturn(['state' => 'awaiting_style_input']);
-        Cache::shouldReceive('put')->once()->with('user_settings_456', ['style' => 'Тарантино'], \Mockery::any());
+        Cache::shouldReceive('get')->twice()->with('user_settings_456', [])->andReturn(['state' => 'awaiting_style_input']);
+        Cache::shouldReceive('put')->once()->with('user_settings_456', ['style' => 'Тарантино', 'state' => null], \Mockery::any());
 
         $response = $this->postJson('/webhook', [
             'message' => [
@@ -156,7 +156,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'style_input_saved']);
+                 ->assertJson(['success' => true, 'status' => 'style_input_saved']);
     }
 
     /**
@@ -172,11 +172,14 @@ class TelegramBotControllerTest extends TestCase
         Http::fake([
             'https://api.telegram.org/*' => Http::response([], 200),
             env('DATABASE_USER_INFO_URL') => Http::response([
-                'telegram_id' => 456,
-                'has_subscription' => true,
-                'subscription_end_date' => Carbon::today()->addMonth()->toDateTimeString(),
-                'todays_requests_count' => 5,
-                'max_requests_per_day' => 50,
+                'success' => true,
+                'data' => [
+                    'telegram_id' => 456,
+                    'has_subscription' => true,
+                    'subscription_end_date' => Carbon::today()->addMonth()->toDateTimeString(),
+                    'todays_requests_count' => 5,
+                    'max_requests_per_day' => 50,
+                ],
             ], 200),
         ]);
 
@@ -191,7 +194,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'user_info_sent']);
+                 ->assertJson(['success' => true, 'status' => 'user_info_sent']);
     }
 
     /**
@@ -217,7 +220,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'subscription_unavailable']);
+                 ->assertJson(['success' => true, 'status' => 'subscription_unavailable']);
     }
 
     /**
@@ -232,9 +235,17 @@ class TelegramBotControllerTest extends TestCase
     {
         Http::fake([
             'https://api.telegram.org/*' => Http::response([], 200),
-            env('DATABASE_CHECK_LIMITS_URL') => Http::response(['todays_requests_count' => 1, 'max_requests_per_day' => 10], 200),
-            env('DEEPSEEK_SERVICE_URL') => Http::response(['text' => 'Пересказ фильма'], 200),
-            env('DATABASE_INCREMENT_LIMITS_URL') => Http::response(['status' => 'limits incremented'], 200),
+            env('DATABASE_CHECK_LIMITS_URL') => Http::response([
+                'success' => true,
+                'data' => ['todays_requests_count' => 1, 'max_requests_per_day' => 10],
+            ], 200),
+            env('DEEPSEEK_SERVICE_URL') => Http::response([
+                'text' => 'Пересказ фильма',
+            ], 200),
+            env('DATABASE_INCREMENT_LIMITS_URL') => Http::response([
+                'success' => true,
+                'data' => ['status' => 'limits_incremented'],
+            ], 200),
         ]);
 
         Cache::shouldReceive('get')->once()->with('user_settings_456', [])->andReturn(['movie' => 'Назад в будущее', 'style' => 'Бухой дед']);
@@ -248,7 +259,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'summary_generated']);
+                 ->assertJson(['success' => true, 'status' => 'summary_generated']);
     }
 
     /**
@@ -275,7 +286,7 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'incomplete_settings']);
+                 ->assertJson(['success' => false, 'status' => 'incomplete_settings']);
     }
 
     /**
@@ -295,7 +306,7 @@ class TelegramBotControllerTest extends TestCase
         $response = $this->postJson('/set-bot-commands');
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'commands_set']);
+                 ->assertJson(['success' => true, 'status' => 'commands_set']);
     }
 
     /**
@@ -313,6 +324,6 @@ class TelegramBotControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['status' => 'ignored']);
+                 ->assertJson(['success' => false, 'status' => 'ignored']);
     }
 }

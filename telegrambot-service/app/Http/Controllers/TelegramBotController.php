@@ -3,297 +3,305 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
+/**
+ * Class TelegramBotController
+ *
+ * Контроллер для обработки вебхуков Telegram и управления командами бота.
+ */
 class TelegramBotController extends Controller
 {
-    public function handle(Request $request): JsonResponse
+    /**
+     * Время хранения настроек пользователя в кэше (в минутах).
+     */
+    private const CACHE_TTL = 60 * 24; // 24 часа
+
+    /**
+     * Валидирует входящий запрос вебхука Telegram.
+     *
+     * @param Request $request
+     * @return array{chat_id: int, user_id: int, text: string}
+     * @throws ValidationException
+     */
+    private function validateWebhookRequest(Request $request): array
     {
-        $messageText = $request->input('message.text');
-        $chatId      = $request->input('message.chat.id');
-        $telegramId  = $request->input('message.from.id');
+        $validator = Validator::make($request->all(), [
+            'message.text' => 'required|string',
+            'message.chat.id' => 'required|integer',
+            'message.from.id' => 'required|integer',
+        ]);
 
-        if (!$messageText || !$chatId || !$telegramId) {
-            return response()->json(['status' => 'ignored']);
+        if ($validator->fails()) {
+            throw new ValidationException($validator, response()->json([
+                'success' => false,
+                'status' => 'ignored',
+                'error' => 'Invalid webhook payload',
+            ], 200));
         }
 
-        $userKey  = "user_settings_{$telegramId}";
-        $settings = Cache::get($userKey, []);
-
-        if (isset($settings['state'])) {
-            if ($settings['state'] === 'awaiting_movie_input') {
-                $settings['movie'] = $messageText;
-                unset($settings['state']);
-                Cache::put($userKey, $settings, now()->addMinutes(15));
-                $this->sendMessage($chatId, "✅ Фильм установлен: {$messageText}");
-                return response()->json(['status' => 'movie_input_saved']);
-            } elseif ($settings['state'] === 'awaiting_style_input') {
-                $settings['style'] = $messageText;
-                unset($settings['state']);
-                Cache::put($userKey, $settings, now()->addMinutes(15));
-                $this->sendMessage($chatId, "✅ Стиль установлен: {$messageText}");
-                return response()->json(['status' => 'style_input_saved']);
-            } else {
-                unset($settings['state']);
-                return response()->json(['status' => 'invalid_state']);
-            }
-        } elseif ($messageText === '/start') {
-            $startText = <<<TEXT
-            👋 Привет! Я бот, который может пересказать фильм от лица твоего бухого деда.
-
-            Доступные команды:
-
-            🎬 /set_movie – Выбрать фильм для пересказа.
-
-            🎭 /set_style – Выбрать кастомный стиль (режиссёр, жанр и т.д.).
-            Стиль по умолчанию - 'Бухой дед'.
-
-            📤 /generate_summary – Сгенерировать пересказ фильма.
-
-            ℹ️ /info – Посмотреть информацию о себе: подписка, лимиты и текущие настройки.
-
-            💎 /subscribe – Оформить подписку (даёт больше запросов в день).
-            TEXT;
-
-            $this->sendMessage($chatId, $startText);
-            return response()->json(['status' => 'start_command_handled']);
-        } elseif ($messageText === '/info') {
-            $infoResponse = Http::withoutVerifying()
-                ->timeout(60)
-                ->post(env('DATABASE_USER_INFO_URL'), [
-                    'telegram_id' => $telegramId,
-                ]);
-
-            if ($infoResponse->failed()) {
-                $this->sendMessage($chatId, '❌ Не удалось получить информацию.');
-                return response()->json(['status' => 'user_info_fetch_failed']);
-            }
-
-            $userInfo = $infoResponse->json();
-            $movie    = $settings['movie'] ?? '-';
-            $style    = $settings['style'] ?? 'Бухой дед';
-
-            $subscriptionStatus = $userInfo['has_subscription']
-                ? '✅ Активна'
-                : '❌ Не Активна';
-            $maxRequests = $userInfo['max_requests_per_day'] ?? 'Неизвестно';
-
-            $infoText = <<<TEXT
-            ℹ️ Информация о пользователе:
-
-            🔹 telegram_id: {$telegramId}
-            🔹 Подписка: {$subscriptionStatus}
-            TEXT;
-
-            if ($userInfo['has_subscription']) {
-                $formattedDate = Carbon::parse($userInfo['subscription_end_date'])
-                    ->format('d.m.Y');
-                $infoText .= " (до {$formattedDate})";
-            }
-
-            $infoText .= <<<TEXT
-
-            🔹 Лимит запросов в день: {$maxRequests}
-            🔹 Запросов за сегодня: {$userInfo['todays_requests_count']}
-
-            🎬 Фильм: {$movie}
-            🎭 Стиль: {$style}
-            TEXT;
-
-            $this->sendMessage($chatId, $infoText);
-            return response()->json(['status' => 'user_info_sent']);
-        } elseif ($messageText === '/subscribe') {
-            $this->sendMessage($chatId, '🚧 Извините, данный сервис пока что не доступен');
-            return response()->json(['status' => 'subscription_unavailable']);
-        } elseif ($messageText === '/set_movie') {
-            $this->sendMessage($chatId, '🎬 Введите название фильма:');
-            $settings['state'] = 'awaiting_movie_input';
-            Cache::put($userKey, $settings, now()->addMinutes(15));
-            return response()->json(['status' => 'awaiting_movie_input']);
-        } elseif ($messageText === '/set_style') {
-            $this->sendMessage(
-                $chatId,
-                "🎨 Введите стиль:\n(Для того, чтобы выбрать стиль по умолчанию, введите 'Бухой дед')"
-            );
-            $settings['state'] = 'awaiting_style_input';
-            Cache::put($userKey, $settings, now()->addMinutes(15));
-            return response()->json(['status' => 'awaiting_style_input']);
-        } elseif ($messageText === '/generate_summary') {
-            $movie = $settings['movie'] ?? '';
-            $style = $settings['style'] ?? 'Бухой дед';
-            if (empty($movie)) {
-                $this->sendMessage($chatId, '⚠️ Укажите фильм с помощью /set_movie.');
-                return response()->json(['status' => 'incomplete_settings']);
-            }
-
-            $this->sendMessage($chatId, '🔄 Проверка лимитов запросов...');
-            $limitResponse = Http::withoutVerifying()
-                ->timeout(60)
-                ->post(env('DATABASE_CHECK_LIMITS_URL'), [
-                    'telegram_id' => $telegramId,
-                ]);
-
-            if ($limitResponse->failed()) {
-                $this->sendMessage($chatId, '❌ Ошибка связи с сервисом проверки лимитов.');
-                return response()->json(['status' => 'user_limits_fetch_failed']);
-            }
-
-            $requestsCount = $limitResponse->json('todays_requests_count');
-            $maxRequests   = $limitResponse->json('max_requests_per_day');
-
-            if ($requestsCount >= $maxRequests) {
-                $this->sendMessage(
-                    $chatId,
-                    "🚫 Вы достигли лимита запросов в день! ({$requestsCount}/{$maxRequests})"
-                );
-                return response()->json(['status' => 'limited']);
-            }
-
-            $this->sendMessage(
-                $chatId,
-                "✅ Лимиты не превышены! ({$requestsCount}/{$maxRequests})"
-            );
-
-            $this->sendMessage(
-                $chatId,
-                "🛠 Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}\n\n"
-                . 'P.S. Обычно это занимает примерно 30 сек.'
-            );
-
-            if ($style == 'Бухой дед') {
-                $prompt = <<<TEXT
-                Представь, что ты русский дед, который воевал во второй мировой войне.
-                Ты любишь СССР, Сталина и водку.
-                Ты ненавидишь Америку, Европу, Обаму, Байдена и фашистов.
-                Ты часто упоминаешь, что раньше(в СССР) было лучше.
-                Также ты часто говоришь, что Америка и Европа - загнивающие страны,
-                там гораздо хуже, чем в матушке-России.
-                Используй устареший диалект и просторечия("ихний", "евонный" и т. д.).
-                В соответствии с этим образом перескажи фильм '{$movie}'.
-                TEXT;
-            } else {
-                $prompt = "Перескажи фильм '{$movie}' в стиле '{$style}'.";
-            }
-
-            $generationResponse = Http::withoutVerifying()
-                ->timeout(180)
-                ->post(env('DEEPSEEK_SERVICE_URL'), [
-                    'prompt' => $prompt,
-                ]);
-
-            if ($generationResponse->failed()) {
-                $this->sendMessage($chatId, '❌ Ошибка генерации текста. Попробуйте позже.');
-                return response()->json(['status' => 'text_generation_failed']);
-            }
-
-            $generatedText = $generationResponse->json('text');
-            if (empty($generatedText)) {
-                $this->sendMessage($chatId, '❌ Ошибка генерации текста. Попробуйте позже.');
-                return response()->json(['status' => 'text_generation_failed']);
-            }
-
-            $this->sendMessage($chatId, $generatedText);
-
-            $updateResponse = Http::withoutVerifying()
-                ->timeout(60)
-                ->post(env('DATABASE_INCREMENT_LIMITS_URL'), [
-                    'telegram_id' => $telegramId,
-                ]);
-
-            if ($updateResponse->failed()) {
-                $this->sendMessage($chatId, '❌ Ошибка связи с базой данных.');
-                return response()->json(['status' => 'user_request_update_failed']);
-            }
-
-            return response()->json(['status' => 'summary_generated']);
-        } else {
-            $availableCommandsText = <<<TEXT
-            Доступные команды:
-
-            🎬 /set_movie – Выбрать фильм для пересказа.
-
-            🎭 /set_style – Выбрать кастомный стиль для пересказа
-
-            📤 /generate_summary – Сгенерировать пересказ фильма.
-
-            ℹ️ /info – Посмотреть информацию о себе: подписка, лимиты и текущие настройки.
-
-            💎 /subscribe – Оформить подписку (даёт больше запросов в день).
-            TEXT;
-
-            $this->sendMessage($chatId, $availableCommandsText);
-            return response()->json(['status' => 'unknown_command']);
-        }
+        return [
+            'chat_id' => $request->input('message.chat.id'),
+            'user_id' => $request->input('message.from.id'),
+            'text' => $request->input('message.text'),
+        ];
     }
 
-    private function sendMessage(int $chatId, string $text): void
+    /**
+     * Отправляет сообщение в Telegram.
+     *
+     * @param int $chatId
+     * @param string $message
+     * @return void
+     */
+    private function sendMessage(int $chatId, string $message): void
     {
-        try {
-            Http::withoutVerifying()
-                ->timeout(60)
+        /*Http::post('https://api.telegram.org/bot' . env('TELEGRAM_BOT_TOKEN') . '/sendMessage', [
+            'chat_id' => $chatId,
+            'text' => $message,
+        ]);*/
+        Http::withoutVerifying()
                 ->post(
                     'https://api.telegram.org/bot' . env('TELEGRAM_BOT_TOKEN') . '/sendMessage',
-                    ['chat_id' => $chatId, 'text' => $text]
+                    ['chat_id' => $chatId, 'text' => $message]
                 );
-        } catch (\Exception $e) {
-            \Log::error('Ошибка отправки Telegram-сообщения: ' . $e->getMessage());
+    }
+
+    /**
+     * Получает или обновляет настройки пользователя в кэше.
+     *
+     * @param int $userId
+     * @param array $updates
+     * @return array
+     */
+    private function manageUserSettings(int $userId, array $updates = []): array
+    {
+        $key = "user_settings_{$userId}";
+        $settings = Cache::get($key, []);
+
+        if ($updates) {
+            $settings = array_merge($settings, $updates);
+            Cache::put($key, $settings, self::CACHE_TTL);
+        }
+
+        return $settings;
+    }
+
+    /**
+     * Обрабатывает входящий вебхук Telegram.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function handle(Request $request): JsonResponse
+    {
+        try {
+            $data = $this->validateWebhookRequest($request);
+            $chatId = $data['chat_id'];
+            $userId = $data['user_id'];
+            $messageText = $data['text'];
+
+            $settings = $this->manageUserSettings($userId);
+
+            if (isset($settings['state'])) {
+                if ($settings['state'] === 'awaiting_movie_input') {
+                    $this->manageUserSettings($userId, ['movie' => $messageText, 'state' => null]);
+                    $this->sendMessage($chatId, '✅ Фильм сохранён: ' . $messageText);
+                    return response()->json(['success' => true, 'status' => 'movie_input_saved']);
+                }
+
+                if ($settings['state'] === 'awaiting_style_input') {
+                    $this->manageUserSettings($userId, ['style' => $messageText, 'state' => null]);
+                    $this->sendMessage($chatId, '✅ Стиль сохранён: ' . $messageText);
+                    return response()->json(['success' => true, 'status' => 'style_input_saved']);
+                }
+            }
+
+            switch ($messageText) {
+                case '/start':
+                    $startText = <<<TEXT
+                    👋 Привет! Я бот, который может пересказать фильм от лица твоего бухого деда.
+
+                    Доступные команды:
+
+                    🎬 /set_movie – Выбрать фильм для пересказа.
+
+                    🎭 /set_style – Выбрать кастомный стиль (режиссёр, жанр и т.д.).
+                    Стиль по умолчанию - 'Бухой дед'.
+
+                    📤 /generate_summary – Сгенерировать пересказ фильма.
+
+                    ℹ️ /info – Посмотреть информацию о себе: подписка, лимиты и текущие настройки.
+
+                    💎 /subscribe – Оформить подписку (даёт больше запросов в день).
+                    TEXT;
+
+                    $this->sendMessage($chatId, $startText);
+                    return response()->json(['success' => true, 'status' => 'start_command_handled']);
+
+                case '/set_movie':
+                    $this->manageUserSettings($userId, ['state' => 'awaiting_movie_input']);
+                    $this->sendMessage($chatId, '🎬 Введите название фильма:');
+                    return response()->json(['success' => true, 'status' => 'awaiting_movie_input']);
+
+                case '/set_style':
+                    $this->manageUserSettings($userId, ['state' => 'awaiting_style_input']);
+                    $this->sendMessage($chatId, "🎨 Введите стиль:\n(Для того, чтобы выбрать стиль по умолчанию, введите 'Бухой дед')");
+                    return response()->json(['success' => true, 'status' => 'awaiting_style_input']);
+
+                case '/info':
+                    $response = Http::post(env('DATABASE_USER_INFO_URL'), ['telegram_id' => $userId]);
+                    $userInfo = $response->json();
+
+                    if (!$response->successful() || !$userInfo['success']) {
+                        $this->sendMessage($chatId, 'Ошибка получения информации.');
+                        return response()->json(['success' => false, 'status' => 'user_info_failed']);
+                    }
+
+                    $data = $userInfo['data'];
+                    $movie = $settings['movie'] ?? 'Не указан';
+                    $style = $settings['style'] ?? 'Бухой дед';
+                    if ($data['has_subscription']) {
+                        $formattedDate = Carbon::parse($data['subscription_end_date'])->format('d.m.Y');
+                        $subscriptionInfo = "✅ Активна(до {$formattedDate})";
+                    }
+                    else {
+                        $subscriptionInfo = "❌ Не активна\n";
+                    }
+
+                    $infoText = <<<TEXT
+                    ℹ️ Информация о пользователе:
+
+                    🔹 telegram_id: {$data['telegram_id']}
+                    🔹 Подписка: {$subscriptionInfo}
+                    🔹 Лимит запросов в день: {$data['max_requests_per_day']}
+                    🔹 Запросов за сегодня: {$data['todays_requests_count']}
+
+                    🎬 Фильм: {$movie}
+                    🎭 Стиль: {$style}
+                    TEXT;
+
+                    $this->sendMessage($chatId, $infoText);
+                    return response()->json(['success' => true, 'status' => 'user_info_sent']);
+
+                case '/subscribe':
+                    $this->sendMessage($chatId, '🚧 Извините, данный сервис пока что не доступен');
+                    return response()->json(['success' => true, 'status' => 'subscription_unavailable']);
+
+                case '/generate_summary':
+                    $movie = $settings['movie'] ?? '';
+                    $style = $settings['style'] ?? 'Бухой дед';
+                    if (empty($movie)) {
+                        $this->sendMessage($chatId, '⚠️ Сначала укажите фильм с помощью /set_movie.');
+                        return response()->json(['success' => false, 'status' => 'incomplete_settings']);
+                    }
+
+                    $this->sendMessage($chatId, '🔄 Проверка лимитов запросов...');
+                    $response = Http::post(env('DATABASE_CHECK_LIMITS_URL'), ['telegram_id' => $userId]);
+                    $limits = $response->json();
+
+                    if (!$response->successful() || !$limits['success']) {
+                        $this->sendMessage($chatId, '❌ Ошибка проверки лимитов.');
+                        return response()->json(['success' => false, 'status' => 'limits_check_failed']);
+                    }
+
+                    $requestsCount = $limits['data']['todays_requests_count'];
+                    $maxRequests = $limits['data']['max_requests_per_day'];
+                    if ($requestsCount >= $maxRequests) {
+                        $this->sendMessage($chatId, "🚫 Лимит запросов исчерпан: {$requestsCount}/{$maxRequests}");
+                        return response()->json(['success' => false, 'status' => 'limit_exceeded']);
+                    }
+                    $this->sendMessage($chatId, "✅ Лимиты не превышены! ({$requestsCount}/{$maxRequests})");
+                    
+                    $this->sendMessage(
+                        $chatId,
+                        "🛠 Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}\n\n"
+                        . 'P.S. Обычно это занимает примерно 30 сек.'
+                    );
+
+                    if ($style == 'Бухой дед') {
+                        $prompt = <<<TEXT
+                        Представь, что ты русский дед, который воевал во второй мировой войне.
+                        Ты любишь СССР, Сталина и водку.
+                        Ты ненавидишь Америку, Европу, Обаму, Байдена и фашистов.
+                        Ты часто упоминаешь, что раньше(в СССР) было лучше.
+                        Также ты часто говоришь, что Америка и Европа - загнивающие страны,
+                        там гораздо хуже, чем в матушке-России.
+                        Используй устареший диалект и просторечия("ихний", "евонный" и т. д.).
+                        В соответствии с этим образом перескажи фильм '{$movie}'.
+                        TEXT;
+                    } else {
+                        $prompt = "Перескажи фильм '{$movie}' в стиле '{$style}'.";
+                    }
+
+                    $response = Http::timeout(60)->post(env('DEEPSEEK_SERVICE_URL'), ['prompt' => $prompt]);
+                    $summary = $response->json()['text'];
+
+                    if (!$response->successful() || empty($summary)) {
+                        $this->sendMessage($chatId, '❌ Ошибка генерации пересказа.');
+                        return response()->json(['success' => false, 'status' => 'summary_generation_failed']);
+                    }
+
+                    $this->sendMessage($chatId, $summary);
+                    $updateResponse = Http::post(env('DATABASE_INCREMENT_LIMITS_URL'), ['telegram_id' => $userId]);
+                    if ($updateResponse->failed()) {
+                        return response()->json(['status' => 'user_request_update_failed']);
+                    }
+                    return response()->json(['success' => true, 'status' => 'summary_generated']);
+
+                default:
+                    $availableCommandsText = <<<TEXT
+                    Доступные команды:
+
+                    🎬 /set_movie – Выбрать фильм для пересказа.
+
+                    🎭 /set_style – Выбрать кастомный стиль для пересказа
+
+                    📤 /generate_summary – Сгенерировать пересказ фильма.
+
+                    ℹ️ /info – Посмотреть информацию о себе: подписка, лимиты и текущие настройки.
+
+                    💎 /subscribe – Оформить подписку (даёт больше запросов в день).
+                    TEXT;
+
+                    $this->sendMessage($chatId, $availableCommandsText);
+                    return response()->json(['success' => true, 'status' => 'unknown_command']);
+            }
+        } catch (ValidationException $e) {
+            return $e->getResponse();
         }
     }
 
-    public function setBotCommands(): JsonResponse
+    /**
+     * Регистрирует команды бота в Telegram.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function setBotCommands(Request $request): JsonResponse
     {
         $commands = [
-            [
-                'command'     => 'start',
-                'description' => 'Вывести общую информацию о боте',
-            ],
-            [
-                'command'     => 'set_movie',
-                'description' => 'Выбрать фильм для пересказа',
-            ],
-            [
-                'command'     => 'set_style',
-                'description' => 'Выбрать кастомный стиль для пересказа',
-            ],
-            [
-                'command'     => 'generate_summary',
-                'description' => 'Сгенерировать пересказ фильма',
-            ],
-            [
-                'command'     => 'info',
-                'description' => 'Показать информацию о подписке, лимитах и настройках',
-            ],
-            [
-                'command'     => 'subscribe',
-                'description' => 'Оформить подписку для увеличения лимита запросов',
-            ],
+            ['command' => 'start', 'description' => 'Запустить бота'],
+            ['command' => 'set_movie', 'description' => 'Указать фильм'],
+            ['command' => 'set_style', 'description' => 'Указать кастомный стиль пересказа'],
+            ['command' => 'info', 'description' => 'Показать информацию о подписке, лимитах и настройках'],
+            ['command' => 'subscribe', 'description' => 'Оформить подписку'],
+            ['command' => 'generate_summary', 'description' => 'Сгенерировать пересказ'],
         ];
 
-        try {
-            $response = Http::withoutVerifying()
-                ->timeout(60)
-                ->post(
-                    'https://api.telegram.org/bot' . env('TELEGRAM_BOT_TOKEN') . '/setMyCommands',
-                    [
-                        'commands'      => json_encode($commands),
-                        'scope'         => json_encode(['type' => 'all_private_chats']),
-                        'language_code' => 'ru',
-                    ]
-                );
+        $response = Http::post('https://api.telegram.org/bot' . env('TELEGRAM_BOT_TOKEN') . '/setMyCommands', [
+            'commands' => $commands,
+        ]);
 
-            if ($response->successful()) {
-                \Log::info('Команды бота успешно зарегистрированы.');
-                return response()->json(['status' => 'commands_set']);
-            } else {
-                \Log::error('Ошибка регистрации команд бота: ' . $response->body());
-                return response()->json(['status' => 'commands_set_failed'], 500);
-            }
-        } catch (\Exception $e) {
-            \Log::error('Исключение при регистрации команд бота: ' . $e->getMessage());
-            return response()->json(['status' => 'commands_set_exception'], 500);
+        if ($response->successful() && $response->json()['ok']) {
+            return response()->json(['success' => true, 'status' => 'commands_set']);
         }
+
+        return response()->json(['success' => false, 'status' => 'commands_set_failed'], 500);
     }
 }
