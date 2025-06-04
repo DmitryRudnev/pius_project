@@ -76,8 +76,8 @@ class TelegramBotController extends Controller
      * Получает или обновляет настройки пользователя в кэше.
      *
      * @param int $userId
-     * @param array $updates
-     * @return array
+     * @param array<string, mixed> $updates
+     * @return array<string, mixed>
      */
     private function manageUserSettings(int $userId, array $updates = []): array
     {
@@ -280,10 +280,9 @@ class TelegramBotController extends Controller
     /**
      * Регистрирует команды бота в Telegram.
      *
-     * @param Request $request
      * @return JsonResponse
      */
-    public function setBotCommands(Request $request): JsonResponse
+    public function setBotCommands(): JsonResponse
     {
         $commands = [
             ['command' => 'start', 'description' => 'Запустить бота'],
