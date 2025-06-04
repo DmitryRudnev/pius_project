@@ -19,3 +19,4 @@ Route::get('/', function () {
 });
 
 Route::post('/webhook', [TelegramBotController::class, 'handle']);
+Route::post('/set-bot-commands', [TelegramBotController::class, 'setBotCommands']);

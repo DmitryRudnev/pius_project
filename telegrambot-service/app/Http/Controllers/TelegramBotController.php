@@ -107,7 +107,7 @@ class TelegramBotController extends Controller
             return response()->json(['status' => 'user_info_sent']);
         } elseif ($messageText === '/subscribe') {
             $this->sendMessage($chatId, '🚧 Извините, данный сервис пока что не доступен');
-            return response()->json(['status' => 'subscription_success']);
+            return response()->json(['status' => 'subscription_unavailable']);
         } elseif ($messageText === '/set_movie') {
             $this->sendMessage($chatId, '🎬 Введите название фильма:');
             $settings['state'] = 'awaiting_movie_input';

@@ -59,7 +59,7 @@ class DatabaseController extends Controller
             ]
         );
 
-        $user->subscription_end_date = now()->addMonth();
+        $user->subscription_end_date = Carbon::today()->addMonth();
         $user->save();
 
         return response()->json([
