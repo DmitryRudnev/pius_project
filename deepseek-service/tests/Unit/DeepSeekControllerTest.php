@@ -4,10 +4,9 @@ namespace Tests\Unit;
 
 use Tests\TestCase;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Http\JsonResponse;
 
 /**
- * Class DeepSeekControllerTest
+ * Class DeepSeekControllerTest.
  *
  * Набор unit-тестов для проверки функциональности DeepSeekController.
  */
@@ -18,8 +17,6 @@ class DeepSeekControllerTest extends TestCase
      *
      * Проверяет, что метод generate возвращает статус 200 и ожидаемый JSON-ответ
      * с текстом, полученным от API, при передаче корректного prompt.
-     *
-     * @return void
      */
     public function test_generate_successful_response(): void
     {
@@ -48,8 +45,6 @@ class DeepSeekControllerTest extends TestCase
      *
      * Проверяет, что метод generate возвращает статус 400 и сообщение об ошибке,
      * если параметр prompt не передан.
-     *
-     * @return void
      */
     public function test_generate_missing_prompt(): void
     {
@@ -66,8 +61,6 @@ class DeepSeekControllerTest extends TestCase
      *
      * Проверяет, что метод generate возвращает статус 500 и сообщение об ошибке,
      * если API вернул ошибку (например, статус 500).
-     *
-     * @return void
      */
     public function test_generate_api_failure(): void
     {
@@ -90,8 +83,6 @@ class DeepSeekControllerTest extends TestCase
      *
      * Проверяет, что метод generate возвращает статус 500 и JSON-структуру
      * с информацией об ошибке, если во время HTTP-запроса возникает исключение.
-     *
-     * @return void
      */
     public function test_generate_handles_exception(): void
     {
@@ -108,7 +99,7 @@ class DeepSeekControllerTest extends TestCase
         $response->assertStatus(500)
                  ->assertJsonStructure([
                      'error',
-                     'message'
+                     'message',
                  ]);
     }
 }

@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Carbon\Carbon;
 
 /**
- * Class TelegramBotControllerTest
+ * Class TelegramBotControllerTest.
  *
  * Набор unit-тестов для проверки функциональности TelegramBotController.
  */
@@ -22,8 +22,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle отправляет приветственное сообщение
      * и возвращает JSON с подтверждением обработки команды.
-     *
-     * @return void
      */
     public function test_start_command_sends_welcome_message(): void
     {
@@ -48,8 +46,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle сохраняет состояние awaiting_movie_input в кэше
      * и возвращает JSON с подтверждением ожидания ввода фильма.
-     *
-     * @return void
      */
     public function test_set_movie_command_sets_awaiting_state(): void
     {
@@ -77,8 +73,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle сохраняет название фильма в кэше
      * и возвращает JSON с подтверждением сохранения.
-     *
-     * @return void
      */
     public function test_movie_input_saves_to_cache(): void
     {
@@ -106,8 +100,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle сохраняет состояние awaiting_style_input в кэше
      * и возвращает JSON с подтверждением ожидания ввода стиля.
-     *
-     * @return void
      */
     public function test_set_style_command_sets_awaiting_state(): void
     {
@@ -135,8 +127,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle сохраняет стиль в кэше
      * и возвращает JSON с подтверждением сохранения.
-     *
-     * @return void
      */
     public function test_style_input_saves_to_cache(): void
     {
@@ -164,21 +154,19 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle запрашивает информацию о пользователе
      * и возвращает JSON с подтверждением отправки информации.
-     *
-     * @return void
      */
     public function test_info_command_returns_user_info(): void
     {
         Http::fake([
-            'https://api.telegram.org/*' => Http::response([], 200),
+            'https://api.telegram.org/*'  => Http::response([], 200),
             env('DATABASE_USER_INFO_URL') => Http::response([
                 'success' => true,
-                'data' => [
-                    'telegram_id' => 456,
-                    'has_subscription' => true,
+                'data'    => [
+                    'telegram_id'           => 456,
+                    'has_subscription'      => true,
                     'subscription_end_date' => Carbon::today()->addMonth()->toDateTimeString(),
                     'todays_requests_count' => 5,
-                    'max_requests_per_day' => 50,
+                    'max_requests_per_day'  => 50,
                 ],
             ], 200),
         ]);
@@ -202,8 +190,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle возвращает сообщение о недоступности сервиса
      * и JSON с подтверждением статуса subscription_unavailable.
-     *
-     * @return void
      */
     public function test_subscribe_command_returns_unavailable(): void
     {
@@ -228,23 +214,21 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle проверяет лимиты, генерирует пересказ
      * и возвращает JSON с подтверждением успешной генерации.
-     *
-     * @return void
      */
     public function test_generate_summary_with_valid_settings(): void
     {
         Http::fake([
-            'https://api.telegram.org/*' => Http::response([], 200),
+            'https://api.telegram.org/*'     => Http::response([], 200),
             env('DATABASE_CHECK_LIMITS_URL') => Http::response([
                 'success' => true,
-                'data' => ['todays_requests_count' => 1, 'max_requests_per_day' => 10],
+                'data'    => ['todays_requests_count' => 1, 'max_requests_per_day' => 10],
             ], 200),
             env('DEEPSEEK_SERVICE_URL') => Http::response([
                 'text' => 'Пересказ фильма',
             ], 200),
             env('DATABASE_INCREMENT_LIMITS_URL') => Http::response([
                 'success' => true,
-                'data' => ['status' => 'limits_incremented'],
+                'data'    => ['status' => 'limits_incremented'],
             ], 200),
         ]);
 
@@ -266,8 +250,6 @@ class TelegramBotControllerTest extends TestCase
      * Тестирует обработку команды /generate_summary без указанного фильма.
      *
      * Проверяет, что метод handle возвращает ошибку, если фильм не указан.
-     *
-     * @return void
      */
     public function test_generate_summary_without_movie(): void
     {
@@ -294,8 +276,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод setBotCommands отправляет запрос на регистрацию команд
      * и возвращает JSON с подтверждением успешной регистрации.
-     *
-     * @return void
      */
     public function test_set_bot_commands_success(): void
     {
@@ -314,8 +294,6 @@ class TelegramBotControllerTest extends TestCase
      *
      * Проверяет, что метод handle возвращает статус ignored, если отсутствуют
      * message.text, message.chat.id или message.from.id.
-     *
-     * @return void
      */
     public function test_missing_required_fields_returns_ignored(): void
     {

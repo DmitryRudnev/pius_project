@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Carbon\Carbon;
 
 /**
- * Class DatabaseControllerTest
+ * Class DatabaseControllerTest.
  *
  * Набор unit-тестов для проверки функциональности DatabaseController.
  */
@@ -21,8 +21,6 @@ class DatabaseControllerTest extends TestCase
      *
      * Проверяет, что метод userInfo создаёт нового пользователя, если он не существует,
      * и возвращает корректный JSON с информацией о пользователе, подписке и лимитах.
-     *
-     * @return void
      */
     public function test_user_info_creates_and_returns_user_data(): void
     {
@@ -35,16 +33,16 @@ class DatabaseControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJson([
                      'success' => true,
-                     'data' => [
-                         'telegram_id' => $telegramId,
-                         'has_subscription' => false,
+                     'data'    => [
+                         'telegram_id'           => $telegramId,
+                         'has_subscription'      => false,
                          'todays_requests_count' => 0,
-                         'max_requests_per_day' => User::MAX_REQUESTS_FREE,
+                         'max_requests_per_day'  => User::MAX_REQUESTS_FREE,
                      ],
                  ]);
 
         $this->assertDatabaseHas('users', [
-            'telegram_id' => $telegramId,
+            'telegram_id'           => $telegramId,
             'todays_requests_count' => 0,
         ]);
     }
@@ -54,8 +52,6 @@ class DatabaseControllerTest extends TestCase
      *
      * Проверяет, что метод subscribe обновляет subscription_end_date
      * и возвращает JSON с подтверждением подписки.
-     *
-     * @return void
      */
     public function test_subscribe_updates_subscription_date(): void
     {
@@ -68,7 +64,7 @@ class DatabaseControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJson([
                      'success' => true,
-                     'data' => [
+                     'data'    => [
                          'status' => 'subscribed',
                      ],
                  ])
@@ -81,7 +77,7 @@ class DatabaseControllerTest extends TestCase
                  ]);
 
         $this->assertDatabaseHas('users', [
-            'telegram_id' => $telegramId,
+            'telegram_id'           => $telegramId,
             'subscription_end_date' => Carbon::today()->addMonth()->toDateTimeString(),
         ]);
     }
@@ -91,16 +87,14 @@ class DatabaseControllerTest extends TestCase
      *
      * Проверяет, что метод resetLimits сбрасывает todays_requests_count
      * и возвращает JSON с подтверждением сброса.
-     *
-     * @return void
      */
     public function test_reset_limits_resets_request_count(): void
     {
         $telegramId = 12345;
         User::create([
-            'telegram_id' => $telegramId,
+            'telegram_id'           => $telegramId,
             'todays_requests_count' => 5,
-            'last_request_date' => Carbon::today(),
+            'last_request_date'     => Carbon::today(),
             'subscription_end_date' => Carbon::parse('2000-01-01'),
         ]);
 
@@ -111,11 +105,11 @@ class DatabaseControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJson([
                      'success' => true,
-                     'data' => ['status' => 'limits_reset'],
+                     'data'    => ['status' => 'limits_reset'],
                  ]);
 
         $this->assertDatabaseHas('users', [
-            'telegram_id' => $telegramId,
+            'telegram_id'           => $telegramId,
             'todays_requests_count' => 0,
         ]);
     }
@@ -125,16 +119,14 @@ class DatabaseControllerTest extends TestCase
      *
      * Проверяет, что метод checkLimits возвращает текущий счётчик запросов
      * и максимальное количество запросов в зависимости от подписки.
-     *
-     * @return void
      */
     public function test_check_limits_returns_correct_limits(): void
     {
         $telegramId = 12345;
         User::create([
-            'telegram_id' => $telegramId,
+            'telegram_id'           => $telegramId,
             'todays_requests_count' => 3,
-            'last_request_date' => Carbon::today(),
+            'last_request_date'     => Carbon::today(),
             'subscription_end_date' => Carbon::tomorrow(),
         ]);
 
@@ -145,9 +137,9 @@ class DatabaseControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJson([
                      'success' => true,
-                     'data' => [
+                     'data'    => [
                          'todays_requests_count' => 3,
-                         'max_requests_per_day' => User::MAX_REQUESTS_SUBSCRIBED,
+                         'max_requests_per_day'  => User::MAX_REQUESTS_SUBSCRIBED,
                      ],
                  ]);
     }
@@ -157,16 +149,14 @@ class DatabaseControllerTest extends TestCase
      *
      * Проверяет, что метод incrementLimits увеличивает todays_requests_count
      * и обновляет last_request_date, возвращая JSON с подтверждением.
-     *
-     * @return void
      */
     public function test_increment_limits_increases_request_count(): void
     {
         $telegramId = 12345;
         User::create([
-            'telegram_id' => $telegramId,
+            'telegram_id'           => $telegramId,
             'todays_requests_count' => 2,
-            'last_request_date' => Carbon::yesterday(),
+            'last_request_date'     => Carbon::yesterday(),
             'subscription_end_date' => Carbon::parse('2000-01-01'),
         ]);
 
@@ -177,13 +167,13 @@ class DatabaseControllerTest extends TestCase
         $response->assertStatus(200)
                  ->assertJson([
                      'success' => true,
-                     'data' => ['status' => 'limits_incremented'],
+                     'data'    => ['status' => 'limits_incremented'],
                  ]);
 
         $this->assertDatabaseHas('users', [
-            'telegram_id' => $telegramId,
+            'telegram_id'           => $telegramId,
             'todays_requests_count' => 3,
-            'last_request_date' => Carbon::today()->toDateTimeString(),
+            'last_request_date'     => Carbon::today()->toDateTimeString(),
         ]);
     }
 
@@ -192,8 +182,6 @@ class DatabaseControllerTest extends TestCase
      *
      * Проверяет, что методы возвращают статус 400 и сообщение об ошибке,
      * если telegram_id не передан.
-     *
-     * @return void
      */
     public function test_missing_telegram_id_returns_error(): void
     {
@@ -210,7 +198,7 @@ class DatabaseControllerTest extends TestCase
             $response->assertStatus(400)
                      ->assertJson([
                          'success' => false,
-                         'error' => 'telegram_id is required and must be an integer',
+                         'error'   => 'telegram_id is required and must be an integer',
                      ]);
         }
     }

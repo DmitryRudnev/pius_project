@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
 /**
- * Class DatabaseController
+ * Class DatabaseController.
  *
  * Контроллер для управления данными пользователей и их лимитами.
  */
@@ -18,8 +18,6 @@ class DatabaseController extends Controller
     /**
      * Проверяет и возвращает telegram_id из запроса.
      *
-     * @param Request $request
-     * @return int
      * @throws \Illuminate\Validation\ValidationException
      */
     private function validateTelegramId(Request $request): int
@@ -31,7 +29,7 @@ class DatabaseController extends Controller
         if ($validator->fails()) {
             throw new \Illuminate\Validation\ValidationException($validator, response()->json([
                 'success' => false,
-                'error' => 'telegram_id is required and must be an integer',
+                'error'   => 'telegram_id is required and must be an integer',
             ], 400));
         }
 
@@ -40,9 +38,6 @@ class DatabaseController extends Controller
 
     /**
      * Получает или создаёт пользователя по telegram_id.
-     *
-     * @param int $telegramId
-     * @return User
      */
     private function getOrCreateUser(int $telegramId): User
     {
@@ -51,21 +46,18 @@ class DatabaseController extends Controller
             [
                 'subscription_end_date' => Carbon::parse('2000-01-01'),
                 'todays_requests_count' => 0,
-                'last_request_date' => Carbon::parse('2000-01-01'),
+                'last_request_date'     => Carbon::parse('2000-01-01'),
             ]
         );
     }
 
     /**
      * Возвращает информацию о пользователе.
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function userInfo(Request $request): JsonResponse
     {
         $telegramId = $this->validateTelegramId($request);
-        $user = $this->getOrCreateUser($telegramId);
+        $user       = $this->getOrCreateUser($telegramId);
 
         $today = Carbon::today();
         if ($user->last_request_date->lt($today)) {
@@ -75,34 +67,31 @@ class DatabaseController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'telegram_id' => $user->telegram_id,
-                'has_subscription' => $user->hasActiveSubscription(),
+            'data'    => [
+                'telegram_id'           => $user->telegram_id,
+                'has_subscription'      => $user->hasActiveSubscription(),
                 'subscription_end_date' => $user->subscription_end_date,
                 'todays_requests_count' => $user->todays_requests_count,
-                'max_requests_per_day' => $user->getMaxRequestsPerDay(),
+                'max_requests_per_day'  => $user->getMaxRequestsPerDay(),
             ],
         ]);
     }
 
     /**
      * Оформляет подписку для пользователя.
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function subscribe(Request $request): JsonResponse
     {
         $telegramId = $this->validateTelegramId($request);
-        $user = $this->getOrCreateUser($telegramId);
+        $user       = $this->getOrCreateUser($telegramId);
 
         $user->subscription_end_date = Carbon::today()->addMonth();
         $user->save();
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'status' => 'subscribed',
+            'data'    => [
+                'status'                => 'subscribed',
                 'subscription_end_date' => $user->subscription_end_date,
             ],
         ]);
@@ -110,34 +99,28 @@ class DatabaseController extends Controller
 
     /**
      * Сбрасывает лимиты запросов пользователя.
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function resetLimits(Request $request): JsonResponse
     {
         $telegramId = $this->validateTelegramId($request);
-        $user = $this->getOrCreateUser($telegramId);
+        $user       = $this->getOrCreateUser($telegramId);
 
         $user->todays_requests_count = 0;
         $user->save();
 
         return response()->json([
             'success' => true,
-            'data' => ['status' => 'limits_reset'],
+            'data'    => ['status' => 'limits_reset'],
         ]);
     }
 
     /**
      * Проверяет лимиты запросов пользователя.
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function checkLimits(Request $request): JsonResponse
     {
         $telegramId = $this->validateTelegramId($request);
-        $user = $this->getOrCreateUser($telegramId);
+        $user       = $this->getOrCreateUser($telegramId);
 
         $today = Carbon::today();
         if ($user->last_request_date->lt($today)) {
@@ -147,23 +130,20 @@ class DatabaseController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => [
+            'data'    => [
                 'todays_requests_count' => $user->todays_requests_count,
-                'max_requests_per_day' => $user->getMaxRequestsPerDay(),
+                'max_requests_per_day'  => $user->getMaxRequestsPerDay(),
             ],
         ]);
     }
 
     /**
      * Увеличивает счётчик запросов пользователя.
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function incrementLimits(Request $request): JsonResponse
     {
         $telegramId = $this->validateTelegramId($request);
-        $user = $this->getOrCreateUser($telegramId);
+        $user       = $this->getOrCreateUser($telegramId);
 
         $user->todays_requests_count += 1;
         $user->last_request_date = Carbon::today();
@@ -171,7 +151,7 @@ class DatabaseController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => ['status' => 'limits_incremented'],
+            'data'    => ['status' => 'limits_incremented'],
         ]);
     }
 }

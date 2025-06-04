@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
 /**
- * Class TelegramBotController
+ * Class TelegramBotController.
  *
  * Контроллер для обработки вебхуков Telegram и управления командами бота.
  */
@@ -25,14 +25,13 @@ class TelegramBotController extends Controller
     /**
      * Валидирует входящий запрос вебхука Telegram.
      *
-     * @param Request $request
      * @return array{chat_id: int, user_id: int, text: string}
      * @throws ValidationException
      */
     private function validateWebhookRequest(Request $request): array
     {
         $validator = Validator::make($request->all(), [
-            'message.text' => 'required|string',
+            'message.text'    => 'required|string',
             'message.chat.id' => 'required|integer',
             'message.from.id' => 'required|integer',
         ]);
@@ -40,24 +39,20 @@ class TelegramBotController extends Controller
         if ($validator->fails()) {
             throw new ValidationException($validator, response()->json([
                 'success' => false,
-                'status' => 'ignored',
-                'error' => 'Invalid webhook payload',
+                'status'  => 'ignored',
+                'error'   => 'Invalid webhook payload',
             ], 200));
         }
 
         return [
             'chat_id' => $request->input('message.chat.id'),
             'user_id' => $request->input('message.from.id'),
-            'text' => $request->input('message.text'),
+            'text'    => $request->input('message.text'),
         ];
     }
 
     /**
      * Отправляет сообщение в Telegram.
-     *
-     * @param int $chatId
-     * @param string $message
-     * @return void
      */
     private function sendMessage(int $chatId, string $message): void
     {
@@ -75,13 +70,12 @@ class TelegramBotController extends Controller
     /**
      * Получает или обновляет настройки пользователя в кэше.
      *
-     * @param int $userId
      * @param array<string, mixed> $updates
      * @return array<string, mixed>
      */
     private function manageUserSettings(int $userId, array $updates = []): array
     {
-        $key = "user_settings_{$userId}";
+        $key      = "user_settings_{$userId}";
         $settings = Cache::get($key, []);
 
         if ($updates) {
@@ -94,16 +88,13 @@ class TelegramBotController extends Controller
 
     /**
      * Обрабатывает входящий вебхук Telegram.
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function handle(Request $request): JsonResponse
     {
         try {
-            $data = $this->validateWebhookRequest($request);
-            $chatId = $data['chat_id'];
-            $userId = $data['user_id'];
+            $data        = $this->validateWebhookRequest($request);
+            $chatId      = $data['chat_id'];
+            $userId      = $data['user_id'];
             $messageText = $data['text'];
 
             $settings = $this->manageUserSettings($userId);
@@ -163,14 +154,13 @@ class TelegramBotController extends Controller
                         return response()->json(['success' => false, 'status' => 'user_info_failed']);
                     }
 
-                    $data = $userInfo['data'];
+                    $data  = $userInfo['data'];
                     $movie = $settings['movie'] ?? 'Не указан';
                     $style = $settings['style'] ?? 'Бухой дед';
                     if ($data['has_subscription']) {
-                        $formattedDate = Carbon::parse($data['subscription_end_date'])->format('d.m.Y');
+                        $formattedDate    = Carbon::parse($data['subscription_end_date'])->format('d.m.Y');
                         $subscriptionInfo = "✅ Активна(до {$formattedDate})";
-                    }
-                    else {
+                    } else {
                         $subscriptionInfo = "❌ Не активна\n";
                     }
 
@@ -203,7 +193,7 @@ class TelegramBotController extends Controller
 
                     $this->sendMessage($chatId, '🔄 Проверка лимитов запросов...');
                     $response = Http::post(env('DATABASE_CHECK_LIMITS_URL'), ['telegram_id' => $userId]);
-                    $limits = $response->json();
+                    $limits   = $response->json();
 
                     if (!$response->successful() || !$limits['success']) {
                         $this->sendMessage($chatId, '❌ Ошибка проверки лимитов.');
@@ -211,13 +201,13 @@ class TelegramBotController extends Controller
                     }
 
                     $requestsCount = $limits['data']['todays_requests_count'];
-                    $maxRequests = $limits['data']['max_requests_per_day'];
+                    $maxRequests   = $limits['data']['max_requests_per_day'];
                     if ($requestsCount >= $maxRequests) {
                         $this->sendMessage($chatId, "🚫 Лимит запросов исчерпан: {$requestsCount}/{$maxRequests}");
                         return response()->json(['success' => false, 'status' => 'limit_exceeded']);
                     }
                     $this->sendMessage($chatId, "✅ Лимиты не превышены! ({$requestsCount}/{$maxRequests})");
-                    
+
                     $this->sendMessage(
                         $chatId,
                         "🛠 Генерация пересказа...\n🎬 Фильм: {$movie}\n🎭 Стиль: {$style}\n\n"
@@ -240,7 +230,7 @@ class TelegramBotController extends Controller
                     }
 
                     $response = Http::timeout(60)->post(env('DEEPSEEK_SERVICE_URL'), ['prompt' => $prompt]);
-                    $summary = $response->json()['text'];
+                    $summary  = $response->json()['text'];
 
                     if (!$response->successful() || empty($summary)) {
                         $this->sendMessage($chatId, '❌ Ошибка генерации пересказа.');
@@ -279,8 +269,6 @@ class TelegramBotController extends Controller
 
     /**
      * Регистрирует команды бота в Telegram.
-     *
-     * @return JsonResponse
      */
     public function setBotCommands(): JsonResponse
     {
