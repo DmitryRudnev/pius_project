@@ -288,6 +288,6 @@
 
 ## Контакты и поддержка
 
-- **Авторы**: Руднев Дмитрий
-- **Telegram**: @here_is_my_nickname
+- **Автор**: Дмитрий Руднев
+- **Telegram**: @here_my_username
 - **GitHub Issues**: https://github.com/DmitryRudnev/pius_project/issues
