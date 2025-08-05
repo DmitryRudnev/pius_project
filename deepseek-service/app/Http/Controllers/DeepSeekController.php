@@ -6,8 +6,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Class DeepSeekController.
+ *
+ * Контроллер для обработки запросов к DeepSeek API и генерации текстовых пересказов.
+ */
 class DeepSeekController extends Controller
 {
+    /**
+     * Генерирует текст на основе переданного промпта через DeepSeek API.
+     *
+     * @param Request $request Входящий HTTP-запрос с параметром prompt.
+     * @return JsonResponse JSON-ответ с сгенерированным текстом или сообщением об ошибке.
+     */
     public function generate(Request $request): JsonResponse
     {
         $prompt = $request->input('prompt');
@@ -18,7 +29,7 @@ class DeepSeekController extends Controller
 
         try {
             $response = Http::withoutVerifying()
-                ->timeout(180)
+                ->timeout(60)
                 ->withToken(env('DEEPSEEK_TOKEN'))
                 ->post('https://api.deepseek.com/v1/chat/completions', [
                     'model'    => 'deepseek-chat',

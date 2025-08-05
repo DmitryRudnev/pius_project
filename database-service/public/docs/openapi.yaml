@@ -1,0 +1,361 @@
+openapi: 3.0.3
+info:
+  title: API сервиса базы данных
+  version: 1.0.0
+  description: API для управления данными пользователей и лимитами запросов в Telegram-боте для пересказов фильмов.
+  contact:
+    name: Команда поддержки
+    email: support@piusbot.example.com
+servers:
+  - url: http://localhost:8001
+    description: Локальный сервер разработки
+tags:
+  - name: Управление пользователями
+    description: Эндпоинты для работы с информацией о пользователях и подписками
+  - name: Лимиты запросов
+    description: Эндпоинты для управления лимитами запросов пользователей
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        error:
+          type: string
+          description: Сообщение об ошибке
+      required:
+        - success
+        - error
+    UserInfoResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        data:
+          type: object
+          properties:
+            telegram_id:
+              type: integer
+              description: Telegram ID пользователя
+            has_subscription:
+              type: boolean
+              description: Указывает, активна ли подписка пользователя
+            subscription_end_date:
+              type: string
+              format: date
+              description: Дата окончания подписки
+            todays_requests_count:
+              type: integer
+              description: Количество запросов за текущий день
+            max_requests_per_day:
+              type: integer
+              description: Максимальное количество запросов в день
+          required:
+            - telegram_id
+            - has_subscription
+            - subscription_end_date
+            - todays_requests_count
+            - max_requests_per_day
+      required:
+        - success
+        - data
+    SubscribeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Статус операции подписки
+            subscription_end_date:
+              type: string
+              format: date
+              description: Обновлённая дата окончания подписки
+          required:
+            - status
+            - subscription_end_date
+      required:
+        - success
+        - data
+    LimitsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Статус операции с лимитами
+          required:
+            - status
+      required:
+        - success
+        - data
+    CheckLimitsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        data:
+          type: object
+          properties:
+            todays_requests_count:
+              type: integer
+              description: Количество запросов за текущий день
+            max_requests_per_day:
+              type: integer
+              description: Максимальное количество запросов в день
+          required:
+            - todays_requests_count
+            - max_requests_per_day
+      required:
+        - success
+        - data
+paths:
+  /api/user-info:
+    post:
+      tags:
+        - Управление пользователями
+      summary: Получение информации о пользователе
+      description: Возвращает данные пользователя, включая статус подписки и лимиты запросов, на основе Telegram ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                telegram_id:
+                  type: integer
+                  description: Telegram ID пользователя
+              required:
+                - telegram_id
+            examples:
+              validRequest:
+                value:
+                  telegram_id: 12345
+      responses:
+        '200':
+          description: Успешный ответ с информацией о пользователе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      telegram_id: 12345
+                      has_subscription: false
+                      subscription_end_date: '2000-01-01'
+                      todays_requests_count: 0
+                      max_requests_per_day: 10
+        '400':
+          description: Неверный запрос (например, отсутствует или некорректен telegram_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  value:
+                    success: false
+                    error: 'telegram_id обязателен и должен быть целым числом'
+  /api/subscribe:
+    post:
+      tags:
+        - Управление пользователями
+      summary: Оформление подписки
+      description: Активирует подписку для пользователя, продлевая дату окончания подписки на один месяц.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                telegram_id:
+                  type: integer
+                  description: Telegram ID пользователя
+              required:
+                - telegram_id
+            examples:
+              validRequest:
+                value:
+                  telegram_id: 12345
+      responses:
+        '200':
+          description: Успешная активация подписки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscribeResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      status: 'subscribed'
+                      subscription_end_date: '2025-09-05'
+        '400':
+          description: Неверный запрос (например, отсутствует или некорректен telegram_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  value:
+                    success: false
+                    error: 'telegram_id обязателен и должен быть целым числом'
+  /api/reset-limits:
+    post:
+      tags:
+        - Лимиты запросов
+      summary: Сброс лимитов запросов
+      description: Сбрасывает счётчик ежедневных запросов для указанного пользователя.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                telegram_id:
+                  type: integer
+                  description: Telegram ID пользователя
+              required:
+                - telegram_id
+            examples:
+              validRequest:
+                value:
+                  telegram_id: 12345
+      responses:
+        '200':
+          description: Успешный сброс лимитов запросов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LimitsResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      status: 'limits_reset'
+        '400':
+          description: Неверный запрос (например, отсутствует или некорректен telegram_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  value:
+                    success: false
+                    error: 'telegram_id обязателен и должен быть целым числом'
+  /api/check-limits:
+    post:
+      tags:
+        - Лимиты запросов
+      summary: Проверка лимитов запросов
+      description: Возвращает текущее количество запросов и максимальное разрешённое количество запросов в день для пользователя.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                telegram_id:
+                  type: integer
+                  description: Telegram ID пользователя
+              required:
+                - telegram_id
+            examples:
+              validRequest:
+                value:
+                  telegram_id: 12345
+      responses:
+        '200':
+          description: Успешный ответ с лимитами запросов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckLimitsResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      todays_requests_count: 3
+                      max_requests_per_day: 50
+        '400':
+          description: Неверный запрос (например, отсутствует или некорректен telegram_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  value:
+                    success: false
+                    error: 'telegram_id обязателен и должен быть целым числом'
+  /api/increment-limits:
+    post:
+      tags:
+        - Лимиты запросов
+      summary: Увеличение счётчика запросов
+      description: Увеличивает счётчик ежедневных запросов для указанного пользователя и обновляет дату последнего запроса.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                telegram_id:
+                  type: integer
+                  description: Telegram ID пользователя
+              required:
+                - telegram_id
+            examples:
+              validRequest:
+                value:
+                  telegram_id: 12345
+      responses:
+        '200':
+          description: Успешное увеличение счётчика запросов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LimitsResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      status: 'limits_incremented'
+        '400':
+          description: Неверный запрос (например, отсутствует или некорректен telegram_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  value:
+                    success: false
+                    error: 'telegram_id обязателен и должен быть целым числом'

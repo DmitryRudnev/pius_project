@@ -59,6 +59,9 @@
         ],
         "analyse-code-style": [
             "vendor/bin/php-cs-fixer fix --dry-run --diff"
+        ],
+        "generate-swagger": [
+            "php artisan l5-swagger:generate"
         ]
     },
     "extra": {

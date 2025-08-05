@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: API сервиса DeepSeek
+  version: 1.0.0
+  description: API для генерации текстовых пересказов фильмов через DeepSeek API.
+  contact:
+    name: Команда поддержки
+    email: support@piusbot.example.com
+servers:
+  - url: http://localhost:8002
+    description: Локальный сервер разработки
+tags:
+  - name: Генерация текста
+    description: Эндпоинты для генерации текстов через DeepSeek API
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Токен авторизации для доступа к DeepSeek API
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Сообщение об ошибке
+        details:
+          type: string
+          description: Дополнительные детали ошибки (если применимо)
+      required:
+        - error
+    TextGenerationResponse:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Сгенерированный текст пересказа
+      required:
+        - text
+paths:
+  /api/generate-text:
+    post:
+      tags:
+        - Генерация текста
+      summary: Генерация текста
+      description: Генерирует текстовый пересказ на основе переданного промпта через DeepSeek API.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  description: Промпт для генерации текста
+              required:
+                - prompt
+            examples:
+              validRequest:
+                value:
+                  prompt: 'Перескажи фильм "Титаник" в стиле "Бухой дед"'
+      responses:
+        '200':
+          description: Успешная генерация текста
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextGenerationResponse'
+              examples:
+                success:
+                  value:
+                    text: 'Ну, короче, этот "Титаник" — здоровый такой корабль, плывёт, а потом бац — айсберг!'
+        '400':
+          description: Неверный запрос (например, отсутствует промпт)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingPrompt:
+                  value:
+                    error: 'Prompt is required'
+        '500':
+          description: Ошибка сервера или DeepSeek API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  value:
+                    error: 'DeepSeek API error'
+                    details: 'Failed to connect to DeepSeek API'

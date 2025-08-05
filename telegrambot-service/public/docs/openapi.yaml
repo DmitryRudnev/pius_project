@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: API сервиса Telegram-бота
+  version: 1.0.0
+  description: API для обработки вебхуков Telegram и управления командами бота для пересказов фильмов.
+  contact:
+    name: Команда поддержки
+    email: support@piusbot.example.com
+servers:
+  - url: http://localhost:8000
+    description: Локальный сервер разработки
+  - url: https://piusbot.loca.lt
+    description: Публичный URL через LocalTunnel
+tags:
+  - name: Вебхук
+    description: Эндпоинты для обработки входящих вебхуков от Telegram
+  - name: Настройка бота
+    description: Эндпоинты для управления командами бота
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        status:
+          type: string
+          description: Статус обработки запроса
+        error:
+          type: string
+          description: Сообщение об ошибке (если применимо)
+      required:
+        - success
+        - status
+    WebhookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        status:
+          type: string
+          description: Статус обработки вебхука
+        error:
+          type: string
+          description: Сообщение об ошибке (если применимо)
+      required:
+        - success
+        - status
+    CommandsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Указывает, успешно ли выполнен запрос
+        status:
+          type: string
+          description: Статус операции установки команд
+      required:
+        - success
+        - status
+paths:
+  /webhook:
+    post:
+      tags:
+        - Вебхук
+      summary: Обработка вебхука Telegram
+      description: Обрабатывает входящие сообщения от Telegram, включая команды бота и пользовательские данные.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: object
+                  properties:
+                    text:
+                      type: string
+                      description: Текст сообщения или команда
+                    chat:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: ID чата
+                      required:
+                        - id
+                    from:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Telegram ID пользователя
+                      required:
+                        - id
+                  required:
+                    - text
+                    - chat
+                    - from
+              required:
+                - message
+            examples:
+              startCommand:
+                value:
+                  message:
+                    text: '/start'
+                    chat:
+                      id: 12345
+                    from:
+                      id: 12345
+              movieCommand:
+                value:
+                  message:
+                    text: '/set_movie Титаник'
+                    chat:
+                      id: 12345
+                    from:
+                      id: 12345
+      responses:
+        '200':
+          description: Успешная обработка вебхука или игнорирование невалидного запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    status: 'start_command_handled'
+                ignored:
+                  value:
+                    success: false
+                    status: 'ignored'
+                    error: 'Invalid webhook payload'
+        '400':
+          description: Неверный формат запроса (например, отсутствуют обязательные поля)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  value:
+                    success: false
+                    status: 'error'
+                    error: 'Missing required fields in webhook payload'
+  /set-bot-commands:
+    post:
+      tags:
+        - Настройка бота
+      summary: Регистрация команд бота
+      description: Устанавливает список команд для Telegram-бота через API Telegram.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Успешная регистрация команд
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandsResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    status: 'commands_set'
+        '500':
+          description: Ошибка при установке команд
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandsResponse'
+              examples:
+                error:
+                  value:
+                    success: false
+                    status: 'commands_set_failed'
+                    error: 'Failed to set bot commands'
